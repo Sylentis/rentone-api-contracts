@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install tools
+        run: |
+          npm install -g @apidevtools/swagger-cli@4
+
+      - name: Extract version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Bundle contracts
+        run: |
+          mkdir -p release-assets
+          swagger-cli bundle contracts/customer/customer.yaml -o release-assets/customer-api-${{ steps.get_version.outputs.VERSION }}.yaml
+          swagger-cli bundle contracts/company/company.yaml -o release-assets/company-api-${{ steps.get_version.outputs.VERSION }}.yaml
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release-assets/customer-api-${{ steps.get_version.outputs.VERSION }}.yaml
+            release-assets/company-api-${{ steps.get_version.outputs.VERSION }}.yaml
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

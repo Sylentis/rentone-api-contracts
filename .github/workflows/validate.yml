@@ -1,0 +1,59 @@
+name: Validate OpenAPI Contracts
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'contracts/**/*.yaml'
+      - 'contracts/**/*.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'contracts/**/*.yaml'
+      - 'contracts/**/*.yml'
+
+jobs:
+  validate:
+    name: Validate Contracts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install validation tools
+        run: |
+          npm install -g @stoplight/spectral-cli@6
+          npm install -g @apidevtools/swagger-cli@4
+
+      - name: Validate Customer API
+        run: |
+          echo "Validating customer API contract..."
+          swagger-cli validate contracts/customer/customer.yaml
+
+      - name: Validate Company API
+        run: |
+          echo "Validating company API contract..."
+          swagger-cli validate contracts/company/company.yaml
+
+      - name: Lint Customer API with Spectral
+        run: |
+          echo "Linting customer API..."
+          spectral lint contracts/customer/customer.yaml --ruleset .spectral.yaml
+
+      - name: Lint Company API with Spectral
+        run: |
+          echo "Linting company API..."
+          spectral lint contracts/company/company.yaml --ruleset .spectral.yaml
+
+      - name: Bundle contracts (test $ref resolution)
+        run: |
+          echo "Testing contract bundling..."
+          swagger-cli bundle contracts/customer/customer.yaml -o /tmp/customer-bundled.yaml
+          swagger-cli bundle contracts/company/company.yaml -o /tmp/company-bundled.yaml
+          echo "Bundling successful - all \$ref links are valid"

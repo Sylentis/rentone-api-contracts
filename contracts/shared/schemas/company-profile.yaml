@@ -1,0 +1,216 @@
+# Company profile schemas for Company Management API
+
+CompanyProfile:
+  type: object
+  description: Full company profile information
+  required:
+    - id
+    - name
+    - email
+    - phone
+  properties:
+    id:
+      $ref: 'common.yaml#/CompanyId'
+      readOnly: true
+    name:
+      type: string
+      description: Company display name
+      example: "Rent-A-Car Poland"
+    description:
+      type: string
+      nullable: true
+      description: Company description visible to customers
+      example: "Leading car rental company in Poland with over 20 years of experience"
+    email:
+      type: string
+      format: email
+      description: Primary contact email
+      example: "contact@rentacar.pl"
+    phone:
+      type: string
+      description: Primary contact phone number
+      example: "+48 22 123 45 67"
+    websiteUrl:
+      type: string
+      format: uri
+      nullable: true
+      description: Company website URL
+      example: "https://www.rentacar.pl"
+    logoUrl:
+      type: string
+      format: uri
+      nullable: true
+      description: URL to company logo image
+      readOnly: true
+      example: "https://cdn.rnt-alph.com/logos/rentacar-poland.png"
+    nip:
+      type: string
+      nullable: true
+      description: Polish tax identification number (NIP)
+      pattern: '^\d{10}$'
+      example: "1234567890"
+    regon:
+      type: string
+      nullable: true
+      description: Polish business registry number (REGON)
+      pattern: '^\d{9}$|^\d{14}$'
+      example: "123456789"
+    address:
+      $ref: '#/CompanyAddress'
+    rating:
+      type: integer
+      nullable: true
+      description: Average customer rating in tenths (e.g., 45 = 4.5 stars, range 10-50)
+      readOnly: true
+      minimum: 10
+      maximum: 50
+      example: 45
+    reviewCount:
+      type: integer
+      description: Total number of customer reviews
+      readOnly: true
+      minimum: 0
+      example: 127
+    createdAt:
+      type: string
+      format: date-time
+      description: When the company was registered
+      readOnly: true
+      example: "2020-01-15T10:30:00Z"
+    updatedAt:
+      type: string
+      format: date-time
+      description: When the profile was last updated
+      readOnly: true
+      example: "2024-11-15T14:20:00Z"
+
+CompanyAddress:
+  type: object
+  description: Company address
+  properties:
+    street:
+      type: string
+      description: Street name and number
+      example: "ul. Marszałkowska 100"
+    city:
+      type: string
+      description: City name
+      example: "Warsaw"
+    postalCode:
+      type: string
+      description: Postal code
+      example: "00-001"
+    country:
+      type: string
+      description: Country name
+      example: "Poland"
+
+UpdateCompanyProfileRequest:
+  type: object
+  description: |
+    Request to update company profile.
+    Only provided fields will be updated (partial update).
+    Logo must be updated via separate endpoint.
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 200
+      description: Company display name
+      example: "Rent-A-Car Poland"
+    description:
+      type: string
+      maxLength: 2000
+      nullable: true
+      description: Company description (max 2000 characters)
+      example: "Leading car rental company in Poland"
+    email:
+      type: string
+      format: email
+      description: Primary contact email
+      example: "contact@rentacar.pl"
+    phone:
+      type: string
+      maxLength: 20
+      description: Primary contact phone number
+      example: "+48 22 123 45 67"
+    websiteUrl:
+      type: string
+      format: uri
+      nullable: true
+      description: Company website URL
+      example: "https://www.rentacar.pl"
+    nip:
+      type: string
+      nullable: true
+      pattern: '^\d{10}$'
+      description: Polish tax identification number (10 digits)
+      example: "1234567890"
+    regon:
+      type: string
+      nullable: true
+      pattern: '^\d{9}$|^\d{14}$'
+      description: Polish business registry number (9 or 14 digits)
+      example: "123456789"
+    address:
+      $ref: '#/UpdateAddressRequest'
+
+UpdateAddressRequest:
+  type: object
+  description: Address update (all fields optional)
+  properties:
+    street:
+      type: string
+      maxLength: 200
+      example: "ul. Marszałkowska 100"
+    city:
+      type: string
+      maxLength: 100
+      example: "Warsaw"
+    postalCode:
+      type: string
+      maxLength: 20
+      example: "00-001"
+    country:
+      type: string
+      maxLength: 100
+      example: "Poland"
+
+UpdateCompanyProfileResponse:
+  type: object
+  required:
+    - profile
+    - message
+  properties:
+    profile:
+      $ref: '#/CompanyProfile'
+    message:
+      type: string
+      description: Success message
+      example: "Profile updated successfully"
+
+UploadLogoResponse:
+  type: object
+  required:
+    - logoUrl
+    - message
+  properties:
+    logoUrl:
+      type: string
+      format: uri
+      description: URL to the uploaded logo
+      example: "https://cdn.rnt-alph.com/logos/rentacar-poland-abc123.png"
+    message:
+      type: string
+      description: Success message
+      example: "Logo uploaded successfully"
+
+DeleteLogoResponse:
+  type: object
+  required:
+    - message
+  properties:
+    message:
+      type: string
+      description: Success message
+      example: "Logo deleted successfully"

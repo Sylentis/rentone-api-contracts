@@ -1,0 +1,30 @@
+# Node modules (if npm integration is added)
+node_modules/
+package-lock.json
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build output
+dist/
+build/
+*.bundle.yaml
+*.bundle.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
+tmp/
+temp/
+.cache/

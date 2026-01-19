@@ -1,0 +1,95 @@
+# Vehicle image management schemas
+
+UploadVehicleImageResponse:
+  type: object
+  required:
+    - imageUrl
+    - index
+    - totalImages
+  properties:
+    imageUrl:
+      type: string
+      format: uri
+      description: URL of the uploaded image
+      example: "https://cdn.example.com/vehicles/abc123/d4e5f6-0.jpg"
+    index:
+      type: integer
+      minimum: 0
+      maximum: 5
+      description: Position of the image in the list (0-based)
+      example: 0
+    totalImages:
+      type: integer
+      minimum: 1
+      maximum: 6
+      description: Total number of images after upload
+      example: 3
+
+VehicleImageList:
+  type: object
+  required:
+    - vehicleId
+    - images
+  properties:
+    vehicleId:
+      $ref: 'common.yaml#/VehicleId'
+    images:
+      type: array
+      maxItems: 6
+      items:
+        $ref: '#/VehicleImage'
+
+VehicleImage:
+  type: object
+  required:
+    - url
+    - index
+  properties:
+    url:
+      type: string
+      format: uri
+      description: URL of the image
+      example: "https://cdn.example.com/vehicles/abc123/d4e5f6-0.jpg"
+    index:
+      type: integer
+      minimum: 0
+      maximum: 5
+      description: Display order (0 = main image)
+      example: 0
+
+ReorderVehicleImagesRequest:
+  type: object
+  required:
+    - imageUrls
+  properties:
+    imageUrls:
+      type: array
+      items:
+        type: string
+        format: uri
+      minItems: 1
+      maxItems: 6
+      description: Complete list of image URLs in desired order. Must contain all existing image URLs.
+      example:
+        - "https://cdn.example.com/vehicles/abc123/img2.jpg"
+        - "https://cdn.example.com/vehicles/abc123/img1.jpg"
+        - "https://cdn.example.com/vehicles/abc123/img3.jpg"
+
+ReorderVehicleImagesResponse:
+  type: object
+  required:
+    - vehicleId
+    - images
+    - message
+  properties:
+    vehicleId:
+      $ref: 'common.yaml#/VehicleId'
+    images:
+      type: array
+      maxItems: 6
+      items:
+        $ref: '#/VehicleImage'
+    message:
+      type: string
+      description: Success message
+      example: "Images reordered successfully"

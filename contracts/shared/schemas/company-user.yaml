@@ -1,0 +1,43 @@
+# Company user schemas for Company Management API
+
+CompanyRole:
+  type: string
+  description: Role of a user within a company
+  enum:
+    - OWNER
+    - MANAGER
+    - VIEWER
+  example: "OWNER"
+
+GetUserRoleResponse:
+  type: object
+  description: |
+    Response containing the authenticated user's role and permissions within their company.
+
+    ## Role Permissions
+
+    | Role | canEditProfile | canManageFleet | canManageReservations |
+    |------|----------------|----------------|----------------------|
+    | OWNER | true | true | true |
+    | MANAGER | false | true | true |
+    | VIEWER | false | false | false |
+  required:
+    - role
+    - canEditProfile
+    - canManageFleet
+    - canManageReservations
+  properties:
+    role:
+      $ref: '#/CompanyRole'
+    canEditProfile:
+      type: boolean
+      description: Whether the user can edit the company profile
+      example: true
+    canManageFleet:
+      type: boolean
+      description: Whether the user can manage the vehicle fleet (add, edit, delete vehicles)
+      example: true
+    canManageReservations:
+      type: boolean
+      description: Whether the user can manage reservations (accept, reject, cancel)
+      example: true

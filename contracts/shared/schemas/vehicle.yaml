@@ -1,0 +1,364 @@
+# Vehicle-related schemas shared across APIs
+
+VehicleBase:
+  type: object
+  required:
+    - id
+    - make
+    - model
+    - year
+    - vehicleType
+    - transmission
+    - fuelType
+    - seats
+    - pricePerDay
+    - currency
+    - available
+  properties:
+    id:
+      $ref: 'common.yaml#/VehicleId'
+    make:
+      type: string
+      description: Vehicle manufacturer
+      example: "Toyota"
+    model:
+      type: string
+      description: Vehicle model
+      example: "RAV4"
+    year:
+      type: integer
+      description: Year of manufacture
+      minimum: 1900
+      maximum: 2100
+      example: 2023
+    vehicleType:
+      $ref: 'enums.yaml#/VehicleType'
+    transmission:
+      $ref: 'enums.yaml#/Transmission'
+    fuelType:
+      $ref: 'enums.yaml#/FuelType'
+    seats:
+      type: integer
+      minimum: 1
+      maximum: 20
+      description: Number of seats
+      example: 5
+    pricePerDay:
+      type: integer
+      format: int64
+      description: Daily rate (1-6 days) in smallest currency unit (e.g., 25000 = 250.00 PLN). This is the base rate.
+      minimum: 0
+      example: 25000
+    weeklyRate:
+      type: integer
+      format: int64
+      nullable: true
+      description: Weekly rate (7-27 days) in smallest currency unit. If not set, daily rate applies.
+      minimum: 0
+      example: 20000
+    monthlyRate:
+      type: integer
+      format: int64
+      nullable: true
+      description: Monthly rate (28+ days) in smallest currency unit. If not set, weekly or daily rate applies.
+      minimum: 0
+      example: 15000
+    securityDeposit:
+      type: integer
+      format: int64
+      nullable: true
+      description: Security deposit (kaucja) in smallest currency unit (e.g., 50000 = 500.00 PLN). Optional.
+      minimum: 0
+      example: 50000
+    currency:
+      type: string
+      description: Currency code (ISO 4217)
+      pattern: '^[A-Z]{3}$'
+      example: "PLN"
+    mainImage:
+      type: string
+      format: uri
+      nullable: true
+      description: URL of the main vehicle image (first image from imageUrls array)
+      example: "https://cdn.example.com/vehicles/rav4.jpg"
+    imageUrls:
+      type: array
+      items:
+        type: string
+        format: uri
+      maxItems: 6
+      description: URLs of vehicle images, ordered by display priority. First image is the main/thumbnail.
+      example:
+        - "https://cdn.example.com/vehicles/rav4-1.jpg"
+        - "https://cdn.example.com/vehicles/rav4-2.jpg"
+        - "https://cdn.example.com/vehicles/rav4-3.jpg"
+    available:
+      type: boolean
+      description: Whether the vehicle is available
+
+VehicleWithBranch:
+  allOf:
+    - $ref: 'vehicle.yaml#/VehicleBase'
+    - type: object
+      required:
+        - branch
+      properties:
+        branch:
+          $ref: 'common.yaml#/BranchInfo'
+
+# Request schema for creating a new vehicle
+CreateVehicleRequest:
+  type: object
+  required:
+    - make
+    - model
+    - year
+    - vehicleType
+    - transmission
+    - fuelType
+    - seats
+    - pricePerDay
+    - branchId
+  properties:
+    make:
+      type: string
+      description: Vehicle manufacturer
+      minLength: 1
+      maxLength: 100
+      example: "Toyota"
+    model:
+      type: string
+      description: Vehicle model
+      minLength: 1
+      maxLength: 100
+      example: "RAV4"
+    year:
+      type: integer
+      description: Year of manufacture
+      minimum: 1900
+      maximum: 2100
+      example: 2023
+    vehicleType:
+      $ref: 'enums.yaml#/VehicleType'
+    transmission:
+      $ref: 'enums.yaml#/Transmission'
+    fuelType:
+      $ref: 'enums.yaml#/FuelType'
+    seats:
+      type: integer
+      minimum: 1
+      maximum: 20
+      description: Number of seats
+      example: 5
+    pricePerDay:
+      type: integer
+      format: int64
+      description: Daily rate (1-6 days) in smallest currency unit (e.g., 25000 = 250.00 PLN). This is the base rate.
+      minimum: 0
+      example: 25000
+    weeklyRate:
+      type: integer
+      format: int64
+      nullable: true
+      description: Weekly rate (7-27 days) in smallest currency unit. Optional - if not set, daily rate applies.
+      minimum: 0
+      example: 20000
+    monthlyRate:
+      type: integer
+      format: int64
+      nullable: true
+      description: Monthly rate (28+ days) in smallest currency unit. Optional - if not set, weekly or daily rate applies.
+      minimum: 0
+      example: 15000
+    securityDeposit:
+      type: integer
+      format: int64
+      nullable: true
+      description: Security deposit (kaucja) in smallest currency unit. Optional.
+      minimum: 0
+      example: 50000
+    currency:
+      type: string
+      description: Currency code (ISO 4217). Defaults to PLN if not provided.
+      pattern: '^[A-Z]{3}$'
+      default: "PLN"
+      example: "PLN"
+    branchId:
+      $ref: 'common.yaml#/BranchId'
+    mainImage:
+      type: string
+      format: uri
+      nullable: true
+      description: URL of the main vehicle image
+      example: "https://cdn.example.com/vehicles/rav4.jpg"
+    available:
+      type: boolean
+      description: Whether the vehicle is available. Defaults to true.
+      default: true
+
+# Response schema for created vehicle
+CreateVehicleResponse:
+  type: object
+  required:
+    - vehicle
+  properties:
+    vehicle:
+      $ref: 'vehicle.yaml#/VehicleWithBranch'
+    message:
+      type: string
+      description: Success message
+      example: "Vehicle created successfully"
+
+# Request schema for updating a vehicle (partial update)
+UpdateVehicleRequest:
+  type: object
+  description: |
+    All fields are optional. Only provided fields will be updated.
+    Cannot change make, model, year, or branchId after creation.
+  properties:
+    vehicleType:
+      $ref: 'enums.yaml#/VehicleType'
+    transmission:
+      $ref: 'enums.yaml#/Transmission'
+    fuelType:
+      $ref: 'enums.yaml#/FuelType'
+    seats:
+      type: integer
+      minimum: 1
+      maximum: 20
+      description: Number of seats
+      example: 5
+    pricePerDay:
+      type: integer
+      format: int64
+      description: Daily rate (1-6 days) in smallest currency unit (e.g., 25000 = 250.00 PLN). This is the base rate.
+      minimum: 0
+      example: 30000
+    weeklyRate:
+      type: integer
+      format: int64
+      nullable: true
+      description: Weekly rate (7-27 days) in smallest currency unit. Set to null to remove.
+      minimum: 0
+      example: 24000
+    monthlyRate:
+      type: integer
+      format: int64
+      nullable: true
+      description: Monthly rate (28+ days) in smallest currency unit. Set to null to remove.
+      minimum: 0
+      example: 18000
+    securityDeposit:
+      type: integer
+      format: int64
+      nullable: true
+      description: Security deposit (kaucja) in smallest currency unit. Set to null to remove.
+      minimum: 0
+      example: 50000
+    description:
+      type: string
+      nullable: true
+      maxLength: 2000
+      description: Vehicle description
+      example: "Recently serviced, excellent condition"
+    features:
+      type: array
+      items:
+        type: string
+      maxItems: 20
+      description: List of vehicle features
+      example: ["GPS", "Bluetooth", "Backup Camera", "Heated Seats"]
+    available:
+      type: boolean
+      description: Whether the vehicle is available for booking
+
+# Response schema for updated vehicle
+UpdateVehicleResponse:
+  type: object
+  required:
+    - vehicle
+  properties:
+    vehicle:
+      $ref: 'vehicle.yaml#/VehicleWithBranch'
+    message:
+      type: string
+      description: Success message
+      example: "Vehicle updated successfully"
+
+# Import/Export schemas
+ImportFileFormat:
+  type: string
+  enum:
+    - xlsx
+    - xls
+    - csv
+  description: Supported file formats for import/export
+
+ExportFileFormat:
+  type: string
+  enum:
+    - xlsx
+    - csv
+  description: Supported file formats for export
+
+ImportValidationError:
+  type: object
+  required:
+    - row
+    - field
+    - message
+  properties:
+    row:
+      type: integer
+      description: Row number in the file (1-based, excluding header)
+      example: 5
+    field:
+      type: string
+      description: Field name that has the error
+      example: "vehicleType"
+    value:
+      type: string
+      nullable: true
+      description: The invalid value that was provided
+      example: "truck"
+    message:
+      type: string
+      description: Description of the validation error
+      example: "Invalid vehicle type. Allowed values: sedan, suv, compact, van, luxury"
+
+ImportVehiclesResponse:
+  type: object
+  required:
+    - success
+    - totalRows
+    - validRows
+    - invalidRows
+  properties:
+    success:
+      type: boolean
+      description: Whether the import was successful
+    totalRows:
+      type: integer
+      description: Total number of data rows in the file (excluding header)
+      example: 50
+    validRows:
+      type: integer
+      description: Number of valid rows
+      example: 48
+    invalidRows:
+      type: integer
+      description: Number of invalid rows
+      example: 2
+    importedCount:
+      type: integer
+      description: Number of vehicles actually imported (only present if success=true)
+      example: 48
+    errors:
+      type: array
+      items:
+        $ref: 'vehicle.yaml#/ImportValidationError'
+      description: List of validation errors (only present if invalidRows > 0)
+    message:
+      type: string
+      description: Summary message
+      example: "Import completed successfully. 48 vehicles imported."

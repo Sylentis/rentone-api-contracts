@@ -1,0 +1,81 @@
+# Shared enum definitions used across all APIs
+
+VehicleType:
+  type: string
+  enum:
+    - sedan
+    - suv
+    - compact
+    - van
+    - luxury
+    - bus
+  description: Type of vehicle
+
+Transmission:
+  type: string
+  enum:
+    - automatic
+    - manual
+  description: Transmission type
+
+FuelType:
+  type: string
+  enum:
+    - petrol
+    - diesel
+    - electric
+    - hybrid
+  description: Fuel/energy type
+
+SortOrder:
+  type: string
+  enum:
+    - price_asc
+    - price_desc
+    - year_desc
+    - popularity_desc
+  description: Sort order for vehicle listings
+
+ReservationStatus:
+  type: string
+  enum:
+    - phone_verification_pending
+    - pending
+    - confirmed
+    - rejected
+    - cancelled
+    - modification_pending
+    - completed
+    - no_show
+  description: |
+    Status of a reservation:
+    - phone_verification_pending: Waiting for customer to verify phone number via SMS code
+    - pending: Phone verified, waiting for company confirmation (auto-cancels after 24 hours)
+    - confirmed: Company has accepted the reservation
+    - rejected: Company has declined the reservation
+    - cancelled: Customer or system cancelled the reservation
+    - modification_pending: Customer requested changes, waiting for company approval
+    - completed: Rental period has ended successfully
+    - no_show: Customer did not pick up the vehicle
+
+ReservationSortOrder:
+  type: string
+  enum:
+    - created_at_desc
+    - created_at_asc
+    - pickup_date_asc
+    - pickup_date_desc
+    - status
+  description: Sort order for reservation listings
+
+CancellationSource:
+  type: string
+  enum:
+    - customer
+    - company
+    - system
+  description: |
+    Who initiated the reservation cancellation:
+    - customer: Customer cancelled their own reservation
+    - company: Company cancelled the customer's reservation
+    - system: System auto-cancelled (e.g., payment timeout, verification expired)

@@ -1,0 +1,44 @@
+extends: [[spectral:oas, all]]
+
+rules:
+  # Info section rules
+  info-contact: warn
+  info-description: error
+  info-license: off
+
+  # Operation rules
+  operation-description: warn
+  operation-operationId: error
+  operation-success-response: error
+  operation-tags: error
+  operation-tag-defined: error
+
+  # Parameter rules
+  operation-parameters: warn
+  path-params: error
+
+  # Schema rules
+  oas3-schema: error
+
+  # Path rules
+  path-declarations-must-exist: error
+  path-keys-no-trailing-slash: error
+  path-not-include-query: error
+
+  # Tag rules
+  openapi-tags: warn
+  tag-description: off
+
+  # Security rules
+  oas3-api-servers: error
+  oas3-server-trailing-slash: error
+
+  # Response rules
+  no-$ref-siblings: error
+
+  # Custom rules
+  example-value-or-externalValue: off
+  no-script-tags-in-markdown: error
+
+  # Disable overly strict rules
+  oas3-unused-component: off

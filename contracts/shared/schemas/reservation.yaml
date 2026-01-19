@@ -1,0 +1,598 @@
+# Reservation-related schemas shared between customer and company APIs
+
+# ==================== PRICING BREAKDOWN ====================
+
+PricingBreakdown:
+  type: object
+  required:
+    - rentalDays
+    - appliedTier
+    - effectiveDailyRate
+    - totalPrice
+    - savings
+  description: Breakdown of how the total price was calculated based on duration tiers
+  properties:
+    rentalDays:
+      type: integer
+      minimum: 1
+      description: Total number of rental days
+      example: 10
+    appliedTier:
+      type: string
+      enum:
+        - daily
+        - weekly
+        - monthly
+      description: The pricing tier that was applied based on rental duration
+      example: "weekly"
+    effectiveDailyRate:
+      type: integer
+      format: int64
+      description: The effective daily rate applied in smallest currency unit
+      example: 20000
+    totalPrice:
+      type: integer
+      format: int64
+      description: Total price for the rental period in smallest currency unit
+      example: 200000
+    savings:
+      type: integer
+      format: int64
+      description: Amount saved compared to daily rate in smallest currency unit
+      example: 50000
+    savingsPercent:
+      type: integer
+      minimum: 0
+      maximum: 100
+      description: Percentage saved compared to daily rate
+      example: 20
+    dailyRateTotal:
+      type: integer
+      format: int64
+      nullable: true
+      description: What the total would have been at daily rate (for comparison)
+      example: 250000
+
+# ==================== DRIVER INFORMATION ====================
+
+DriverInfo:
+  type: object
+  required:
+    - firstName
+    - lastName
+    - email
+    - phone
+    - termsAccepted
+  properties:
+    firstName:
+      type: string
+      minLength: 1
+      maxLength: 100
+      description: Driver's first name
+      example: "Jan"
+    lastName:
+      type: string
+      minLength: 1
+      maxLength: 100
+      description: Driver's last name
+      example: "Kowalski"
+    email:
+      type: string
+      format: email
+      maxLength: 255
+      description: Driver's email address for confirmation and communication
+      example: "jan.kowalski@example.com"
+    phone:
+      type: string
+      pattern: '^\+?[0-9\s\-]{9,20}$'
+      description: Driver's phone number
+      example: "+48 123 456 789"
+    termsAccepted:
+      type: boolean
+      description: Whether the driver accepted the rental terms and conditions
+      example: true
+
+# ==================== CUSTOMER REQUEST/RESPONSE SCHEMAS ====================
+
+CreateReservationRequest:
+  type: object
+  required:
+    - vehicleId
+    - pickupDate
+    - returnDate
+    - driver
+  properties:
+    vehicleId:
+      $ref: 'common.yaml#/VehicleId'
+      description: ID of the vehicle to reserve
+    pickupDate:
+      type: string
+      format: date-time
+      description: Requested pickup date and time (ISO 8601)
+      example: "2024-12-20T10:00:00Z"
+    returnDate:
+      type: string
+      format: date-time
+      description: Requested return date and time (ISO 8601)
+      example: "2024-12-27T10:00:00Z"
+    driver:
+      $ref: '#/DriverInfo'
+      description: Information about the primary driver
+    notes:
+      type: string
+      maxLength: 1000
+      nullable: true
+      description: Optional notes or special requests from the customer
+      example: "Please have the car ready with a child seat"
+
+CreateReservationResponse:
+  type: object
+  required:
+    - reservation
+    - confirmationCode
+    - message
+    - phoneVerificationRequired
+  properties:
+    reservation:
+      $ref: '#/ReservationDetails'
+    confirmationCode:
+      type: string
+      pattern: '^[A-Z0-9]{8}$'
+      description: 8-character confirmation code for accessing the reservation without authentication
+      example: "ABC12345"
+    message:
+      type: string
+      description: Success message
+      example: "Reservation created. Please verify your phone number with the SMS code sent to your phone."
+    phoneVerificationRequired:
+      type: boolean
+      description: Indicates if phone verification is required before the reservation can proceed
+      example: true
+    verificationExpiresAt:
+      type: string
+      format: date-time
+      description: When the phone verification code expires (only present if phoneVerificationRequired is true)
+      example: "2024-12-15T10:15:00Z"
+
+ReservationDetails:
+  type: object
+  required:
+    - id
+    - status
+    - pickupDate
+    - returnDate
+    - driver
+    - vehicle
+    - branch
+    - company
+    - totalPrice
+    - currency
+    - createdAt
+  properties:
+    id:
+      $ref: 'common.yaml#/ReservationId'
+    status:
+      $ref: 'enums.yaml#/ReservationStatus'
+    pickupDate:
+      type: string
+      format: date-time
+      description: Pickup date and time
+      example: "2024-12-20T10:00:00Z"
+    returnDate:
+      type: string
+      format: date-time
+      description: Return date and time
+      example: "2024-12-27T10:00:00Z"
+    driver:
+      $ref: '#/DriverInfo'
+    vehicle:
+      $ref: '#/ReservationVehicleInfo'
+    branch:
+      $ref: 'common.yaml#/BranchInfo'
+    company:
+      $ref: 'common.yaml#/CompanyInfo'
+    totalPrice:
+      type: integer
+      format: int64
+      description: Total price for the rental period in smallest currency unit (e.g., 175000 = 1750.00 PLN)
+      example: 175000
+    currency:
+      type: string
+      pattern: '^[A-Z]{3}$'
+      description: Currency code (ISO 4217)
+      example: "PLN"
+    pricingBreakdown:
+      $ref: '#/PricingBreakdown'
+      nullable: true
+      description: Detailed breakdown of pricing calculation (present when duration-based pricing is applied)
+    notes:
+      type: string
+      nullable: true
+      description: Customer notes or special requests
+      example: "Please have the car ready with a child seat"
+    rejectionReason:
+      type: string
+      nullable: true
+      description: Reason for rejection (only present when status is rejected)
+      example: "Vehicle is no longer available for the requested dates"
+    expiresAt:
+      type: string
+      format: date-time
+      nullable: true
+      description: When the pending reservation will auto-cancel (only for pending status)
+      example: "2024-12-16T10:00:00Z"
+    createdAt:
+      type: string
+      format: date-time
+      description: When the reservation was created
+      example: "2024-12-15T10:00:00Z"
+    updatedAt:
+      type: string
+      format: date-time
+      nullable: true
+      description: When the reservation was last updated
+      example: "2024-12-15T14:30:00Z"
+    cancelledBy:
+      $ref: 'enums.yaml#/CancellationSource'
+      nullable: true
+      description: Who cancelled the reservation (null if not cancelled)
+    cancelledAt:
+      type: string
+      format: date-time
+      nullable: true
+      description: When the reservation was cancelled
+      example: "2024-12-15T14:30:00Z"
+    cancellationReason:
+      type: string
+      nullable: true
+      maxLength: 500
+      description: Optional reason for cancellation
+      example: "Vehicle no longer available for requested dates"
+
+ReservationVehicleInfo:
+  type: object
+  required:
+    - id
+    - make
+    - model
+    - year
+    - vehicleType
+    - pricePerDay
+    - currency
+  properties:
+    id:
+      $ref: 'common.yaml#/VehicleId'
+    make:
+      type: string
+      description: Vehicle manufacturer
+      example: "Toyota"
+    model:
+      type: string
+      description: Vehicle model name
+      example: "RAV4"
+    year:
+      type: integer
+      description: Year of manufacture
+      example: 2023
+    vehicleType:
+      $ref: 'enums.yaml#/VehicleType'
+    transmission:
+      $ref: 'enums.yaml#/Transmission'
+    fuelType:
+      $ref: 'enums.yaml#/FuelType'
+    seats:
+      type: integer
+      description: Number of seats
+      example: 5
+    pricePerDay:
+      type: integer
+      format: int64
+      description: Daily rental price (1-6 days) in smallest currency unit (e.g., 25000 = 250.00 PLN)
+      example: 25000
+    weeklyRate:
+      type: integer
+      format: int64
+      nullable: true
+      description: Weekly rental rate (7-27 days) in smallest currency unit. If not set, daily rate applies.
+      example: 20000
+    monthlyRate:
+      type: integer
+      format: int64
+      nullable: true
+      description: Monthly rental rate (28+ days) in smallest currency unit. If not set, weekly or daily rate applies.
+      example: 15000
+    currency:
+      type: string
+      pattern: '^[A-Z]{3}$'
+      description: Currency code (ISO 4217)
+      example: "PLN"
+    mainImage:
+      type: string
+      format: uri
+      nullable: true
+      description: Main vehicle image URL
+      example: "https://cdn.example.com/vehicles/rav4.jpg"
+
+CustomerReservationListResponse:
+  type: object
+  required:
+    - reservations
+    - pagination
+  properties:
+    reservations:
+      type: array
+      items:
+        $ref: '#/ReservationSummary'
+      description: List of customer's reservations
+    pagination:
+      $ref: 'common.yaml#/PaginationInfo'
+
+ReservationSummary:
+  type: object
+  required:
+    - id
+    - status
+    - pickupDate
+    - returnDate
+    - vehicle
+    - company
+    - totalPrice
+    - currency
+  properties:
+    id:
+      $ref: 'common.yaml#/ReservationId'
+    status:
+      $ref: 'enums.yaml#/ReservationStatus'
+    pickupDate:
+      type: string
+      format: date-time
+      example: "2024-12-20T10:00:00Z"
+    returnDate:
+      type: string
+      format: date-time
+      example: "2024-12-27T10:00:00Z"
+    vehicle:
+      $ref: '#/ReservationVehicleSummary'
+    company:
+      $ref: 'common.yaml#/CompanyInfo'
+    totalPrice:
+      type: integer
+      format: int64
+      description: Total price in smallest currency unit (e.g., 175000 = 1750.00 PLN)
+      example: 175000
+    currency:
+      type: string
+      example: "PLN"
+
+ReservationVehicleSummary:
+  type: object
+  required:
+    - id
+    - make
+    - model
+    - vehicleType
+  properties:
+    id:
+      $ref: 'common.yaml#/VehicleId'
+    make:
+      type: string
+      example: "Toyota"
+    model:
+      type: string
+      example: "RAV4"
+    vehicleType:
+      $ref: 'enums.yaml#/VehicleType'
+    mainImage:
+      type: string
+      format: uri
+      nullable: true
+      example: "https://cdn.example.com/vehicles/rav4.jpg"
+
+ModifyReservationRequest:
+  type: object
+  description: |
+    Request to modify a reservation. At least one field must be provided.
+    Modifications require company approval and will set status to modification_pending.
+  properties:
+    pickupDate:
+      type: string
+      format: date-time
+      description: New pickup date and time
+      example: "2024-12-21T10:00:00Z"
+    returnDate:
+      type: string
+      format: date-time
+      description: New return date and time
+      example: "2024-12-28T10:00:00Z"
+    notes:
+      type: string
+      maxLength: 1000
+      nullable: true
+      description: Updated notes or special requests
+      example: "Please have the car ready with a child seat and GPS"
+
+CancelReservationResponse:
+  type: object
+  required:
+    - message
+    - reservation
+  properties:
+    message:
+      type: string
+      description: Success message
+      example: "Reservation cancelled successfully"
+    reservation:
+      $ref: '#/ReservationDetails'
+
+# ==================== COMPANY REQUEST/RESPONSE SCHEMAS ====================
+
+CompanyReservationListResponse:
+  type: object
+  required:
+    - reservations
+    - pagination
+  properties:
+    reservations:
+      type: array
+      items:
+        $ref: '#/CompanyReservationSummary'
+      description: List of reservations for the company
+    pagination:
+      $ref: 'common.yaml#/PaginationInfo'
+
+CompanyReservationSummary:
+  type: object
+  required:
+    - id
+    - status
+    - pickupDate
+    - returnDate
+    - driver
+    - vehicle
+    - branch
+    - totalPrice
+    - currency
+    - createdAt
+  properties:
+    id:
+      $ref: 'common.yaml#/ReservationId'
+    status:
+      $ref: 'enums.yaml#/ReservationStatus'
+    pickupDate:
+      type: string
+      format: date-time
+      example: "2024-12-20T10:00:00Z"
+    returnDate:
+      type: string
+      format: date-time
+      example: "2024-12-27T10:00:00Z"
+    driver:
+      $ref: '#/DriverInfo'
+    vehicle:
+      $ref: '#/ReservationVehicleSummary'
+    branch:
+      $ref: 'common.yaml#/BranchInfo'
+    totalPrice:
+      type: integer
+      format: int64
+      description: Total price in smallest currency unit (e.g., 175000 = 1750.00 PLN)
+      example: 175000
+    currency:
+      type: string
+      example: "PLN"
+    expiresAt:
+      type: string
+      format: date-time
+      nullable: true
+      description: When the pending reservation will auto-cancel
+      example: "2024-12-16T10:00:00Z"
+    createdAt:
+      type: string
+      format: date-time
+      example: "2024-12-15T10:00:00Z"
+
+UpdateReservationStatusRequest:
+  type: object
+  required:
+    - status
+  properties:
+    status:
+      type: string
+      enum:
+        - confirmed
+        - rejected
+        - completed
+        - no_show
+      description: |
+        New status for the reservation:
+        - confirmed: Accept the reservation
+        - rejected: Decline the reservation (must provide rejectionReason)
+        - completed: Mark as successfully completed
+        - no_show: Customer did not show up
+    rejectionReason:
+      type: string
+      maxLength: 500
+      description: Required when status is 'rejected'. Reason for rejecting the reservation.
+      example: "Vehicle is no longer available for the requested dates"
+
+UpdateReservationStatusResponse:
+  type: object
+  required:
+    - message
+    - reservation
+  properties:
+    message:
+      type: string
+      description: Success message
+      example: "Reservation confirmed successfully"
+    reservation:
+      $ref: '#/ReservationDetails'
+
+ApproveModificationRequest:
+  type: object
+  required:
+    - approved
+  properties:
+    approved:
+      type: boolean
+      description: Whether to approve or reject the modification request
+    rejectionReason:
+      type: string
+      maxLength: 500
+      description: Required when approved is false. Reason for rejecting the modification.
+      example: "Vehicle is not available for the new dates"
+
+ApproveModificationResponse:
+  type: object
+  required:
+    - message
+    - reservation
+  properties:
+    message:
+      type: string
+      description: Result message
+      example: "Modification approved successfully"
+    reservation:
+      $ref: '#/ReservationDetails'
+
+# ==================== PHONE VERIFICATION SCHEMAS ====================
+
+VerifyPhoneRequest:
+  type: object
+  required:
+    - code
+  properties:
+    code:
+      type: string
+      pattern: '^[0-9]{6}$'
+      description: 6-digit SMS verification code sent to the customer's phone
+      example: "123456"
+
+VerifyPhoneResponse:
+  type: object
+  required:
+    - message
+    - reservation
+  properties:
+    message:
+      type: string
+      description: Success message
+      example: "Phone number verified successfully. Reservation is now pending company confirmation."
+    reservation:
+      $ref: '#/ReservationDetails'
+
+ResendVerificationCodeResponse:
+  type: object
+  required:
+    - message
+    - expiresAt
+  properties:
+    message:
+      type: string
+      description: Success message
+      example: "Verification code sent successfully"
+    expiresAt:
+      type: string
+      format: date-time
+      description: When the new verification code expires
+      example: "2024-12-15T10:15:00Z"
