@@ -596,3 +596,72 @@ ResendVerificationCodeResponse:
       format: date-time
       description: When the new verification code expires
       example: "2024-12-15T10:15:00Z"
+
+# ==================== EMPLOYEE RESERVATION CREATION ====================
+
+CreateEmployeeReservationRequest:
+  type: object
+  required:
+    - vehicleId
+    - pickupDate
+    - returnDate
+    - driver
+  properties:
+    vehicleId:
+      type: string
+      pattern: '^tcrn:vehicle:[a-f0-9-]+$'
+      description: ID of the vehicle to reserve
+      example: "tcrn:vehicle:3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    pickupDate:
+      type: string
+      format: date-time
+      description: Pickup date and time
+      example: "2024-12-20T10:00:00Z"
+    returnDate:
+      type: string
+      format: date-time
+      description: Return date and time
+      example: "2024-12-27T10:00:00Z"
+    driver:
+      $ref: '#/DriverInfo'
+    notes:
+      type: string
+      maxLength: 500
+      nullable: true
+      description: Optional reservation notes (max 500 characters)
+      example: "Customer prefers automatic transmission"
+    sendNotifications:
+      type: boolean
+      default: false
+      description: |
+        Whether to send email/SMS notifications to the driver.
+        If true, confirmation email and SMS (if phone provided) will be sent.
+      example: true
+
+CreateEmployeeReservationResponse:
+  type: object
+  required:
+    - reservation
+    - vehicle
+    - branch
+    - company
+    - confirmationCode
+    - message
+  properties:
+    reservation:
+      $ref: '#/ReservationDetails'
+    vehicle:
+      $ref: '#/ReservationVehicleInfo'
+    branch:
+      $ref: 'common.yaml#/BranchInfo'
+    company:
+      $ref: 'common.yaml#/CompanyInfo'
+    confirmationCode:
+      type: string
+      description: 8-character alphanumeric confirmation code for the reservation
+      pattern: '^[A-Z0-9]{8}$'
+      example: "ABC123XY"
+    message:
+      type: string
+      description: Success message
+      example: "Reservation created successfully"

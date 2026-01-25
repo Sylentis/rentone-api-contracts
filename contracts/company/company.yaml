@@ -1758,6 +1758,155 @@ paths:
               schema:
                 $ref: '../shared/schemas/common.yaml#/ErrorResponse'
 
+    post:
+      tags:
+        - Reservations
+      summary: Create reservation by employee
+      description: |
+        Create a reservation on behalf of a customer by a company employee (OWNER or MANAGER).
+        Employee-created reservations are immediately confirmed (no phone verification required)
+        and do not generate platform commission (commission is waived).
+      operationId: createEmployeeReservation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../shared/schemas/reservation.yaml#/CreateEmployeeReservationRequest'
+            example:
+              vehicleId: "tcrn:vehicle:3fa85f64-5717-4562-b3fc-2c963f66afa6"
+              pickupDate: "2024-12-20T10:00:00Z"
+              returnDate: "2024-12-27T10:00:00Z"
+              driver:
+                firstName: "Jan"
+                lastName: "Kowalski"
+                email: "jan.kowalski@example.com"
+                phone: "+48 123 456 789"
+                termsAccepted: true
+              notes: "Customer prefers automatic transmission"
+              sendNotifications: true
+      responses:
+        '201':
+          description: Reservation created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/reservation.yaml#/CreateEmployeeReservationResponse'
+              example:
+                reservation:
+                  id: "tcrn:reservation:aabbccdd-1122-3344-5566-778899aabbcc"
+                  confirmationCode: "ABC123XY"
+                  status: "confirmed"
+                  pickupDate: "2024-12-20T10:00:00Z"
+                  returnDate: "2024-12-27T10:00:00Z"
+                  driver:
+                    firstName: "Jan"
+                    lastName: "Kowalski"
+                    email: "jan.kowalski@example.com"
+                    phone: "+48 123 456 789"
+                    termsAccepted: true
+                  vehicle:
+                    id: "tcrn:vehicle:3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                    make: "Toyota"
+                    model: "RAV4"
+                    year: 2023
+                    vehicleType: "suv"
+                    transmission: "automatic"
+                    fuelType: "hybrid"
+                    seats: 5
+                    mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
+                  branch:
+                    id: "tcrn:branch:22222222-2222-2222-2222-222222222222"
+                    name: "Warsaw Downtown"
+                    city: "Warsaw"
+                    address: "ul. Marszałkowska 100, 00-001 Warszawa"
+                    phone: "+48 22 123 4567"
+                  company:
+                    id: "tcrn:company:11111111-1111-1111-1111-111111111111"
+                    name: "Warsaw Premium Rentals"
+                    email: "contact@warsawpremium.pl"
+                  totalPrice: 175000
+                  currency: "PLN"
+                  pricingBreakdown:
+                    rentalDays: 7
+                    appliedTier: "premium"
+                    effectiveDailyRate: 25000
+                    dailyRateTotal: 175000
+                    totalPrice: 175000
+                    savings: 0
+                    savingsPercent: 0
+                  notes: "Customer prefers automatic transmission"
+                  createdAt: "2024-12-15T10:00:00Z"
+                confirmationCode: "ABC123XY"
+                message: "Reservation created successfully"
+
+        '400':
+          description: Bad request - invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              examples:
+                invalidDates:
+                  summary: Invalid date range
+                  value:
+                    message: "Return date must be after pickup date"
+                    status: 400
+                    timestamp: "2024-12-15T10:00:00Z"
+                pastDate:
+                  summary: Pickup date in the past
+                  value:
+                    message: "Pickup date cannot be in the past"
+                    status: 400
+                    timestamp: "2024-12-15T10:00:00Z"
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '403':
+          description: Forbidden - vehicle belongs to different company
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                message: "Cannot create reservation for vehicle not owned by your company"
+                status: 403
+                timestamp: "2024-12-15T10:00:00Z"
+
+        '404':
+          description: Vehicle not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                message: "Vehicle not found: tcrn:vehicle:3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                status: 404
+                timestamp: "2024-12-15T10:00:00Z"
+
+        '409':
+          description: Conflict - vehicle has overlapping active reservations
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                message: "Vehicle is not available for the requested dates"
+                status: 409
+                timestamp: "2024-12-15T10:00:00Z"
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
   /reservations/{reservationId}:
     get:
       tags:
