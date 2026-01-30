@@ -23,6 +23,8 @@ tags:
     description: Vehicle reservation operations for customers
   - name: Authentication
     description: User authentication and profile operations
+  - name: Profile
+    description: Customer profile management operations
 
 paths:
   /auth/me:
@@ -1657,6 +1659,955 @@ paths:
               schema:
                 $ref: '../shared/schemas/common.yaml#/ErrorResponse'
 
+  # ==================== PROFILE MANAGEMENT ====================
+  /profile:
+    post:
+      tags:
+        - Profile
+      summary: Create customer profile
+      description: |
+        Create a new customer profile with personal information.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token.
+
+        **Required fields**:
+        - firstName: Customer's first name
+        - lastName: Customer's last name
+        - email: Email address (must match authenticated user)
+        - phone: Contact phone number
+
+        **Optional fields**:
+        - dateOfBirth: Date of birth (ISO 8601 format)
+        - address: Primary address
+        - driverLicense: Driver's license information
+      operationId: createProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProfileRequest'
+      responses:
+        '201':
+          description: Profile created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '409':
+          description: Conflict - profile already exists for this user
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /profile/{id}:
+    get:
+      tags:
+        - Profile
+      summary: Get profile by ID
+      description: |
+        Retrieve customer profile details by profile ID.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token.
+        Users can only access their own profile.
+      operationId: getProfileById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Profile ID
+          schema:
+            type: string
+            example: "tcrn:profile:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden - not authorized to view this profile
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+    put:
+      tags:
+        - Profile
+      summary: Update profile
+      description: |
+        Update customer profile information.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token.
+        Users can only update their own profile.
+
+        **Note**: Changing email or phone will require re-verification.
+      operationId: updateProfile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Profile ID
+          schema:
+            type: string
+            example: "tcrn:profile:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden - not authorized to update this profile
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+    delete:
+      tags:
+        - Profile
+      summary: Delete profile (soft delete)
+      description: |
+        Soft delete a customer profile. The profile is marked as deleted but not
+        physically removed from the database for compliance and audit purposes.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token.
+        Users can only delete their own profile.
+      operationId: deleteProfile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Profile ID
+          schema:
+            type: string
+            example: "tcrn:profile:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+      responses:
+        '200':
+          description: Profile deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteProfileResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden - not authorized to delete this profile
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /profile/{id}/history:
+    get:
+      tags:
+        - Profile
+      summary: Get profile change history
+      description: |
+        Retrieve the history of all changes made to a customer profile.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token.
+        Users can only view their own profile history.
+      operationId: getProfileHistory
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Profile ID
+          schema:
+            type: string
+            example: "tcrn:profile:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+        - name: page
+          in: query
+          description: Page number (zero-indexed)
+          required: false
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+        - name: size
+          in: query
+          description: Number of items per page
+          required: false
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Profile history retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileHistoryResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden - not authorized to view this profile history
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /profile/{id}/avatar:
+    post:
+      tags:
+        - Profile
+      summary: Upload profile avatar
+      description: |
+        Upload a profile avatar image.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token.
+
+        **Validation**:
+        - Maximum file size: 5MB
+        - Allowed formats: JPEG, PNG, WebP
+        - Image will be resized to 400x400px
+      operationId: uploadAvatar
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Profile ID
+          schema:
+            type: string
+            example: "tcrn:profile:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - avatar
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: Avatar image file
+      responses:
+        '200':
+          description: Avatar uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvatarUploadResponse'
+        '400':
+          description: Bad request - invalid file format or size
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden - not authorized to update this profile
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /profile/{id}/driver-license:
+    put:
+      tags:
+        - Profile
+      summary: Update driver license information
+      description: |
+        Update or add driver's license information to the profile.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token.
+
+        **Validation**:
+        - License must not be expired
+        - Issue date must be before expiry date
+        - Valid license number format required
+      operationId: updateDriverLicense
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Profile ID
+          schema:
+            type: string
+            example: "tcrn:profile:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriverLicenseRequest'
+      responses:
+        '200':
+          description: Driver license updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriverLicenseResponse'
+        '400':
+          description: Bad request - validation error or expired license
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden - not authorized to update this profile
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /profile/{id}/addresses:
+    post:
+      tags:
+        - Profile
+      summary: Add address to profile
+      description: |
+        Add a new address (home, work, billing, etc.) to the customer profile.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token.
+      operationId: addAddress
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Profile ID
+          schema:
+            type: string
+            example: "tcrn:profile:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+      responses:
+        '201':
+          description: Address added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressResponse'
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden - not authorized to update this profile
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+    get:
+      tags:
+        - Profile
+      summary: Get all addresses for profile
+      description: |
+        Retrieve all addresses associated with a customer profile.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token.
+      operationId: getAddresses
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Profile ID
+          schema:
+            type: string
+            example: "tcrn:profile:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+      responses:
+        '200':
+          description: Addresses retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressListResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden - not authorized to view this profile
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /profile/{id}/addresses/{addressId}:
+    put:
+      tags:
+        - Profile
+      summary: Update address
+      description: |
+        Update an existing address for the customer profile.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token.
+      operationId: updateAddress
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Profile ID
+          schema:
+            type: string
+            example: "tcrn:profile:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+        - name: addressId
+          in: path
+          required: true
+          description: Address ID
+          schema:
+            type: string
+            example: "tcrn:address:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+      responses:
+        '200':
+          description: Address updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressResponse'
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden - not authorized to update this profile
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Address not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+    delete:
+      tags:
+        - Profile
+      summary: Delete address
+      description: |
+        Delete an address from the customer profile.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token.
+      operationId: deleteAddress
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Profile ID
+          schema:
+            type: string
+            example: "tcrn:profile:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+        - name: addressId
+          in: path
+          required: true
+          description: Address ID
+          schema:
+            type: string
+            example: "tcrn:address:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+      responses:
+        '204':
+          description: Address deleted successfully
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden - not authorized to update this profile
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Address not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+    patch:
+      tags:
+        - Profile
+      summary: Set default address
+      description: |
+        Set an address as the default for the customer profile.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token.
+      operationId: setDefaultAddress
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Profile ID
+          schema:
+            type: string
+            example: "tcrn:profile:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+        - name: addressId
+          in: path
+          required: true
+          description: Address ID
+          schema:
+            type: string
+            example: "tcrn:address:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - isDefault
+              properties:
+                isDefault:
+                  type: boolean
+                  description: Set as default address
+                  example: true
+      responses:
+        '200':
+          description: Default address set successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden - not authorized to update this profile
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Address not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /profile/{id}/payment-methods:
+    post:
+      tags:
+        - Profile
+      summary: Add payment method
+      description: |
+        Add a new payment method to the customer profile.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token.
+
+        **Note**: Actual card details are not stored - this integrates with
+        a payment gateway that returns a tokenized reference.
+      operationId: addPaymentMethod
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Profile ID
+          schema:
+            type: string
+            example: "tcrn:profile:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentMethodRequest'
+      responses:
+        '201':
+          description: Payment method added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethodResponse'
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden - not authorized to update this profile
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+    get:
+      tags:
+        - Profile
+      summary: Get payment methods
+      description: |
+        Retrieve all payment methods for the customer profile.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token.
+      operationId: getPaymentMethods
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Profile ID
+          schema:
+            type: string
+            example: "tcrn:profile:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+      responses:
+        '200':
+          description: Payment methods retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMethodListResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden - not authorized to view this profile
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /profile/{id}/verify:
+    post:
+      tags:
+        - Profile
+      summary: Verify profile
+      description: |
+        Initiate profile verification process. This may trigger email/phone verification
+        or manual review depending on the verification type requested.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token.
+      operationId: verifyProfile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Profile ID
+          schema:
+            type: string
+            example: "tcrn:profile:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyProfileRequest'
+      responses:
+        '200':
+          description: Verification process initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyProfileResponse'
+        '400':
+          description: Bad request - profile not ready for verification
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden - not authorized to verify this profile
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
 components:
   # Customer-specific response schemas
   schemas:
@@ -2201,6 +3152,558 @@ components:
           type: integer
           description: Number of audit events that were anonymized
           example: 12
+
+    # ==================== PROFILE MANAGEMENT SCHEMAS ====================
+    CreateProfileRequest:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+        - phone
+      properties:
+        firstName:
+          type: string
+          description: Customer's first name
+          minLength: 1
+          maxLength: 100
+          example: "Jan"
+        lastName:
+          type: string
+          description: Customer's last name
+          minLength: 1
+          maxLength: 100
+          example: "Kowalski"
+        email:
+          type: string
+          format: email
+          description: Customer's email address
+          example: "jan.kowalski@example.com"
+        phone:
+          type: string
+          description: Customer's phone number (E.164 format)
+          pattern: '^\+?[1-9]\d{1,14}$'
+          example: "+48123456789"
+        dateOfBirth:
+          type: string
+          format: date
+          description: Customer's date of birth (ISO 8601 format)
+          nullable: true
+          example: "1990-01-15"
+        address:
+          $ref: '#/components/schemas/AddressRequest'
+          nullable: true
+        driverLicense:
+          $ref: '#/components/schemas/DriverLicenseRequest'
+          nullable: true
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "Jan"
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "Kowalski"
+        email:
+          type: string
+          format: email
+          example: "jan.kowalski@example.com"
+        phone:
+          type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
+          example: "+48123456789"
+        dateOfBirth:
+          type: string
+          format: date
+          nullable: true
+          example: "1990-01-15"
+
+    ProfileResponse:
+      type: object
+      required:
+        - id
+        - firstName
+        - lastName
+        - email
+        - phone
+        - isVerified
+        - isDeleted
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Profile ID (prefixed format)
+          example: "tcrn:profile:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+        firstName:
+          type: string
+          example: "Jan"
+        lastName:
+          type: string
+          example: "Kowalski"
+        email:
+          type: string
+          format: email
+          example: "jan.kowalski@example.com"
+        phone:
+          type: string
+          example: "+48123456789"
+        dateOfBirth:
+          type: string
+          format: date
+          nullable: true
+          example: "1990-01-15"
+        avatarUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: URL to profile avatar image
+          example: "https://storage.example.com/avatars/507f1f77.jpg"
+        emailVerified:
+          type: boolean
+          description: Whether email has been verified
+          example: true
+        phoneVerified:
+          type: boolean
+          description: Whether phone has been verified
+          example: true
+        isVerified:
+          type: boolean
+          description: Whether the profile is fully verified
+          example: true
+        pendingVerification:
+          type: boolean
+          description: Whether verification is pending
+          example: false
+        isDeleted:
+          type: boolean
+          description: Whether the profile has been soft deleted
+          example: false
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the profile was deleted
+          example: null
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddressResponse'
+          nullable: true
+        driverLicense:
+          $ref: '#/components/schemas/DriverLicenseResponse'
+          nullable: true
+        defaultAddressId:
+          type: string
+          nullable: true
+          description: ID of the default address
+          example: "tcrn:address:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-20T14:30:00Z"
+
+    DeleteProfileResponse:
+      type: object
+      required:
+        - message
+        - deletedAt
+      properties:
+        message:
+          type: string
+          example: "Profile deleted successfully"
+        deletedAt:
+          type: string
+          format: date-time
+          example: "2024-01-30T10:00:00Z"
+
+    ProfileHistoryResponse:
+      type: object
+      required:
+        - content
+        - pagination
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfileHistoryEntry'
+        pagination:
+          $ref: '../shared/schemas/common.yaml#/PaginationInfo'
+
+    ProfileHistoryEntry:
+      type: object
+      required:
+        - id
+        - changeType
+        - fieldName
+        - changedAt
+      properties:
+        id:
+          type: string
+          example: "tcrn:profile-history:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+        changeType:
+          type: string
+          enum: [CREATE, UPDATE, DELETE]
+          example: "UPDATE"
+        fieldName:
+          type: string
+          description: Name of the field that changed
+          example: "email"
+        oldValue:
+          type: string
+          nullable: true
+          description: Previous value (if applicable)
+          example: "old@example.com"
+        newValue:
+          type: string
+          nullable: true
+          description: New value
+          example: "new@example.com"
+        changedAt:
+          type: string
+          format: date-time
+          example: "2024-01-20T14:30:00Z"
+        changedBy:
+          type: string
+          nullable: true
+          description: User ID who made the change
+          example: "tcrn:user:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+
+    AddressRequest:
+      type: object
+      required:
+        - street
+        - city
+        - postalCode
+        - country
+      properties:
+        type:
+          type: string
+          enum: [HOME, WORK, BILLING, SHIPPING, OTHER]
+          description: Type of address
+          example: "HOME"
+        label:
+          type: string
+          nullable: true
+          description: Custom label for the address
+          example: "Home Address"
+        street:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "Marszalkowska 123"
+        city:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "Warsaw"
+        postalCode:
+          type: string
+          pattern: '^\d{2}-\d{3}$|^\d{5}$'
+          description: Postal code (Polish format XX-XXX or 5 digits)
+          example: "00-001"
+        country:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: "Poland"
+        isDefault:
+          type: boolean
+          description: Set as default address
+          default: false
+          example: false
+
+    AddressResponse:
+      type: object
+      required:
+        - id
+        - street
+        - city
+        - postalCode
+        - country
+        - isDefault
+        - createdAt
+      properties:
+        id:
+          type: string
+          example: "tcrn:address:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+        type:
+          type: string
+          enum: [HOME, WORK, BILLING, SHIPPING, OTHER]
+          nullable: true
+          example: "HOME"
+        label:
+          type: string
+          nullable: true
+          example: "Home Address"
+        street:
+          type: string
+          example: "Marszalkowska 123"
+        city:
+          type: string
+          example: "Warsaw"
+        postalCode:
+          type: string
+          example: "00-001"
+        country:
+          type: string
+          example: "Poland"
+        isDefault:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-20T14:30:00Z"
+
+    AddressListResponse:
+      type: object
+      required:
+        - addresses
+      properties:
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddressResponse'
+
+    DriverLicenseRequest:
+      type: object
+      required:
+        - licenseNumber
+        - issuingCountry
+        - expiryDate
+      properties:
+        licenseNumber:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Driver's license number
+          example: "DL1234567890"
+        issuingCountry:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Country that issued the license
+          example: "Poland"
+        issueDate:
+          type: string
+          format: date
+          nullable: true
+          description: Date the license was issued
+          example: "2019-01-15"
+        expiryDate:
+          type: string
+          format: date
+          description: License expiration date
+          example: "2029-01-15"
+        category:
+          type: string
+          nullable: true
+          description: License category (e.g., B for cars)
+          example: "B"
+
+    DriverLicenseResponse:
+      type: object
+      required:
+        - id
+        - licenseNumber
+        - issuingCountry
+        - expiryDate
+        - status
+      properties:
+        id:
+          type: string
+          example: "tcrn:driver-license:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+        licenseNumber:
+          type: string
+          example: "DL1234567890"
+        issuingCountry:
+          type: string
+          example: "Poland"
+        issueDate:
+          type: string
+          format: date
+          nullable: true
+          example: "2019-01-15"
+        expiryDate:
+          type: string
+          format: date
+          example: "2029-01-15"
+        category:
+          type: string
+          nullable: true
+          example: "B"
+        status:
+          type: string
+          enum: [ACTIVE, EXPIRED, SUSPENDED]
+          description: License status
+          example: "ACTIVE"
+        expired:
+          type: boolean
+          description: Whether the license is expired
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-01-20T14:30:00Z"
+
+    AvatarUploadResponse:
+      type: object
+      required:
+        - avatarUrl
+        - message
+      properties:
+        avatarUrl:
+          type: string
+          format: uri
+          description: URL to the uploaded avatar
+          example: "https://storage.example.com/avatars/507f1f77.jpg"
+        message:
+          type: string
+          example: "Avatar uploaded successfully"
+
+    PaymentMethodRequest:
+      type: object
+      required:
+        - type
+        - cardNumber
+        - expiryMonth
+        - expiryYear
+        - cardholderName
+      properties:
+        type:
+          type: string
+          enum: [CARD, PAYPAL, BANK_TRANSFER]
+          description: Payment method type
+          example: "CARD"
+        cardNumber:
+          type: string
+          pattern: '^\d{13,19}$'
+          description: Card number (will be tokenized, not stored)
+          example: "4111111111111111"
+        expiryMonth:
+          type: integer
+          minimum: 1
+          maximum: 12
+          description: Card expiry month
+          example: 12
+        expiryYear:
+          type: integer
+          minimum: 2024
+          maximum: 2099
+          description: Card expiry year
+          example: 2028
+        cardholderName:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Name on the card
+          example: "Jan Kowalski"
+        isDefault:
+          type: boolean
+          description: Set as default payment method
+          default: false
+          example: true
+
+    PaymentMethodResponse:
+      type: object
+      required:
+        - id
+        - type
+        - last4
+        - expiryMonth
+        - expiryYear
+        - isDefault
+      properties:
+        id:
+          type: string
+          example: "tcrn:payment-method:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
+        type:
+          type: string
+          enum: [CARD, PAYPAL, BANK_TRANSFER]
+          example: "CARD"
+        last4:
+          type: string
+          pattern: '^\d{4}$'
+          description: Last 4 digits of card number
+          example: "1111"
+        expiryMonth:
+          type: integer
+          example: 12
+        expiryYear:
+          type: integer
+          example: 2028
+        cardholderName:
+          type: string
+          nullable: true
+          example: "Jan Kowalski"
+        isDefault:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:00:00Z"
+
+    PaymentMethodListResponse:
+      type: object
+      required:
+        - paymentMethods
+      properties:
+        paymentMethods:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentMethodResponse'
+
+    VerifyProfileRequest:
+      type: object
+      required:
+        - verificationType
+      properties:
+        verificationType:
+          type: string
+          enum: [EMAIL, PHONE, DRIVER_LICENSE, FULL]
+          description: Type of verification to perform
+          example: "FULL"
+
+    VerifyProfileResponse:
+      type: object
+      required:
+        - message
+        - verificationStatus
+      properties:
+        message:
+          type: string
+          example: "Verification process initiated"
+        verificationStatus:
+          type: string
+          enum: [PENDING, IN_PROGRESS, VERIFIED, REJECTED]
+          example: "PENDING"
+        verificationToken:
+          type: string
+          nullable: true
+          description: Token for email/phone verification
+          example: "abc123def456"
 
   securitySchemes:
     bearerAuth:
