@@ -1408,6 +1408,255 @@ paths:
               schema:
                 $ref: '../shared/schemas/common.yaml#/ErrorResponse'
 
+  /verification/phone/send:
+    post:
+      tags:
+        - Phone Verification
+      summary: Send OTP to phone number
+      description: |
+        Send a one-time password (OTP) via SMS to verify phone number ownership.
+
+        **Rate limiting:**
+        - Maximum 3 requests per phone number per hour
+        - Minimum 60 seconds between requests for same phone number
+      operationId: sendPhoneVerificationOtp
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phoneNumber
+                - countryCode
+              properties:
+                phoneNumber:
+                  type: string
+                  description: Phone number to verify (with country code)
+                  pattern: '^\+?[1-9]\d{1,14}$'
+                  example: "+48123456789"
+                countryCode:
+                  type: string
+                  description: ISO 3166-1 alpha-2 country code
+                  pattern: '^[A-Z]{2}$'
+                  example: "PL"
+      responses:
+        '200':
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - message
+                  - sessionId
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "OTP sent to +48***789"
+                  sessionId:
+                    type: string
+                    format: uuid
+                    description: Session ID for verification
+                    example: "550e8400-e29b-41d4-a716-446655440000"
+                  expiresAt:
+                    type: string
+                    format: date-time
+                    description: When the OTP expires
+                    example: "2024-12-15T10:15:00Z"
+        '400':
+          description: Bad request - invalid phone number
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '429':
+          description: Too many requests - rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /verification/phone/verify:
+    post:
+      tags:
+        - Phone Verification
+      summary: Verify OTP code
+      description: |
+        Verify the OTP code sent to the phone number.
+
+        **Rate limiting:**
+        - Maximum 5 verification attempts per session
+        - Session expires after 15 minutes
+      operationId: verifyPhoneOtp
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sessionId
+                - code
+              properties:
+                sessionId:
+                  type: string
+                  format: uuid
+                  description: Session ID from send request
+                  example: "550e8400-e29b-41d4-a716-446655440000"
+                code:
+                  type: string
+                  description: 6-digit OTP code
+                  pattern: '^\d{6}$'
+                  example: "123456"
+      responses:
+        '200':
+          description: Phone number verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - verified
+                  - phoneNumber
+                properties:
+                  verified:
+                    type: boolean
+                    example: true
+                  phoneNumber:
+                    type: string
+                    description: The verified phone number
+                    example: "+48123456789"
+                  verifiedAt:
+                    type: string
+                    format: date-time
+                    example: "2024-12-15T10:05:00Z"
+        '400':
+          description: Bad request - invalid or expired code
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Verification failed - incorrect code
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '429':
+          description: Too many attempts
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /verification/phone/resend:
+    post:
+      tags:
+        - Phone Verification
+      summary: Resend OTP code
+      description: |
+        Resend the OTP code to the same phone number.
+
+        **Rate limiting:**
+        - Maximum 3 resend requests per session
+        - Minimum 60 seconds between resend requests
+      operationId: resendPhoneVerificationOtp
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sessionId
+              properties:
+                sessionId:
+                  type: string
+                  format: uuid
+                  description: Session ID from original send request
+                  example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: OTP resent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - message
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "OTP resent to +48***789"
+                  expiresAt:
+                    type: string
+                    format: date-time
+                    description: When the new OTP expires
+                    example: "2024-12-15T10:20:00Z"
+        '400':
+          description: Bad request - session not found or expired
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '429':
+          description: Too many requests - rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
 components:
   # Customer-specific response schemas
   schemas:
