@@ -68,13 +68,15 @@ DriverInfo:
       type: string
       minLength: 1
       maxLength: 100
-      description: Driver's first name
+      pattern: '^[a-zA-ZÀ-ž\s\-\.'']+$'
+      description: Driver's first name (letters, spaces, hyphens, apostrophes, periods)
       example: "Jan"
     lastName:
       type: string
       minLength: 1
       maxLength: 100
-      description: Driver's last name
+      pattern: '^[a-zA-ZÀ-ž\s\-\.'']+$'
+      description: Driver's last name (letters, spaces, hyphens, apostrophes, periods)
       example: "Kowalski"
     email:
       type: string
