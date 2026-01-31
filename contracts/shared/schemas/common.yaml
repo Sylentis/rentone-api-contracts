@@ -36,6 +36,9 @@ BranchInfo:
       $ref: '#/BranchId'
     name:
       type: string
+      pattern: '^[a-zA-ZÀ-ž\s\-\.'']+$'
+      minLength: 1
+      maxLength: 100
       description: Branch name
       example: "Warsaw Downtown"
     city:
