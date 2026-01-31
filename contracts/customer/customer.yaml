@@ -3114,6 +3114,7 @@ components:
         - lastName
         - email
         - phone
+        - status
         - isVerified
         - isDeleted
         - createdAt
@@ -3135,6 +3136,11 @@ components:
         phone:
           type: string
           example: "+48123456789"
+        status:
+          type: string
+          enum: [ACTIVE, VERIFIED, PENDING_VERIFICATION, DELETED]
+          description: Current status of the profile
+          example: "VERIFIED"
         dateOfBirth:
           type: string
           format: date
@@ -3215,17 +3221,17 @@ components:
           example: "DELETED"
 
     ProfileHistoryResponse:
-      type: object
-      required:
-        - content
-        - pagination
-      properties:
-        content:
-          type: array
-          items:
-            $ref: '#/components/schemas/ProfileHistoryEntry'
-        pagination:
-          $ref: '../shared/schemas/common.yaml#/PaginationInfo'
+      allOf:
+        - type: object
+          required:
+            - content
+          properties:
+            content:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProfileHistoryEntry'
+              description: List of profile history entries
+        - $ref: '../shared/schemas/common.yaml#/PaginationInfo'
 
     ProfileHistoryEntry:
       type: object
