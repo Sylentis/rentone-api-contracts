@@ -3063,7 +3063,7 @@ components:
         phone:
           type: string
           description: Customer's phone number (E.164 format)
-          pattern: '^\+?[1-9]\d{1,14}$'
+          pattern: '^\+?[1-9]\d{7,14}$'
           example: "+48123456789"
         dateOfBirth:
           type: string
@@ -3097,7 +3097,7 @@ components:
           example: "jan.kowalski@example.com"
         phone:
           type: string
-          pattern: '^\+?[1-9]\d{1,14}$'
+          pattern: '^\+?[1-9]\d{7,14}$'
           example: "+48123456789"
         dateOfBirth:
           type: string
