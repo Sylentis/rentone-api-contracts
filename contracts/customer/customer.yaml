@@ -3042,7 +3042,6 @@ components:
         - firstName
         - lastName
         - email
-        - phone
       properties:
         firstName:
           type: string
