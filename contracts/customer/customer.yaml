@@ -3200,6 +3200,7 @@ components:
       required:
         - message
         - deletedAt
+        - status
       properties:
         message:
           type: string
@@ -3208,6 +3209,10 @@ components:
           type: string
           format: date-time
           example: "2024-01-30T10:00:00Z"
+        status:
+          type: string
+          enum: [DELETED]
+          example: "DELETED"
 
     ProfileHistoryResponse:
       type: object
