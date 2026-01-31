@@ -2007,7 +2007,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AvatarUploadResponse'
+                $ref: '#/components/schemas/ProfileResponse'
         '400':
           description: Bad request - invalid file format or size
           content:
