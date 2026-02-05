@@ -2564,7 +2564,7 @@ components:
         vehicles:
           type: array
           items:
-            $ref: '../shared/schemas/vehicle.yaml#/VehicleWithBranch'
+            $ref: '../shared/schemas/vehicle.yaml#/VehicleBase'
           description: List of vehicles from different branches of the same company
         company:
           $ref: '../shared/schemas/common.yaml#/CompanyInfo'

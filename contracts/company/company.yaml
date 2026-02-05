@@ -625,7 +625,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '../shared/schemas/vehicle.yaml#/VehicleWithBranch'
+                $ref: '../shared/schemas/vehicle.yaml#/VehicleBase'
               example:
                 id: "tcrn:vehicle:3fa85f64-5717-4562-b3fc-2c963f66afa6"
                 make: "Toyota"
@@ -1086,163 +1086,6 @@ paths:
 
         '401':
           description: Unauthorized - invalid or missing authentication
-          content:
-            application/json:
-              schema:
-                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
-
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
-
-  /branches:
-    get:
-      tags:
-        - Fleet Management
-      summary: List company branches
-      description: |
-        Returns all branches belonging to the authenticated company.
-        Use this endpoint to populate branch selectors when creating or editing vehicles.
-      operationId: getCompanyBranches
-
-      responses:
-        '200':
-          description: Successfully retrieved company branches
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CompanyBranchesResponse'
-              example:
-                branches:
-                  - id: "tcrn:branch:22222222-2222-2222-2222-222222222222"
-                    name: "Warsaw Downtown"
-                    city: "Warsaw"
-                    address: "ul. Marszałkowska 1"
-                  - id: "tcrn:branch:33333333-3333-3333-3333-333333333333"
-                    name: "Warsaw Airport"
-                    city: "Warsaw"
-                    address: "Chopin Airport, Terminal 1"
-                  - id: "tcrn:branch:44444444-4444-4444-4444-444444444444"
-                    name: "Krakow Center"
-                    city: "Krakow"
-                    address: "ul. Floriańska 15"
-
-        '401':
-          description: Unauthorized - invalid or missing authentication
-          content:
-            application/json:
-              schema:
-                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
-              example:
-                error: "Unauthorized"
-                message: "Invalid or missing authentication token"
-                timestamp: "2024-11-15T12:00:00Z"
-
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
-
-  /branches/{branchId}/vehicles:
-    get:
-      tags:
-        - Fleet Management
-      summary: Get vehicles for a specific branch
-      description: |
-        Returns all vehicles at the specified branch belonging to the authenticated company.
-        Companies can filter by vehicle type and availability status.
-      operationId: getBranchVehicles
-      parameters:
-        # Path parameter
-        - name: branchId
-          in: path
-          required: true
-          description: Unique identifier of the branch (prefixed format)
-          schema:
-            $ref: '../shared/schemas/common.yaml#/BranchId'
-        # Vehicle filters
-        - $ref: '../shared/parameters/common.yaml#/VehicleTypeParam'
-        - $ref: '../shared/parameters/common.yaml#/TransmissionParam'
-        - $ref: '../shared/parameters/common.yaml#/FuelTypeParam'
-        - name: available
-          in: query
-          required: false
-          description: Filter by availability status
-          schema:
-            type: boolean
-          example: true
-        # Pagination
-        - $ref: '../shared/parameters/common.yaml#/PageParam'
-        - $ref: '../shared/parameters/common.yaml#/SizeParam'
-
-      responses:
-        '200':
-          description: Successfully retrieved branch vehicles
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BranchVehiclesResponse'
-              example:
-                vehicles:
-                  - id: "tcrn:vehicle:9fa85f64-5717-4562-b3fc-2c963f66afac"
-                    make: "Toyota"
-                    model: "RAV4"
-                    year: 2023
-                    vehicleType: "suv"
-                    transmission: "automatic"
-                    fuelType: "hybrid"
-                    seats: 5
-                    pricePerDay: 250.00
-                    currency: "PLN"
-                    mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
-                    available: true
-                branch:
-                  id: "tcrn:branch:22222222-2222-2222-2222-222222222222"
-                  name: "Warsaw Downtown"
-                  city: "Warsaw"
-                  address: "ul. Marszałkowska 1"
-                pagination:
-                  currentPage: 0
-                  pageSize: 20
-                  totalElements: 8
-                  totalPages: 1
-
-        '401':
-          description: Unauthorized - invalid or missing authentication
-          content:
-            application/json:
-              schema:
-                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
-
-        '403':
-          description: Forbidden - branch does not belong to the authenticated company
-          content:
-            application/json:
-              schema:
-                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
-              example:
-                error: "Forbidden"
-                message: "Branch does not belong to your company"
-                timestamp: "2024-11-15T12:00:00Z"
-
-        '404':
-          description: Branch not found
-          content:
-            application/json:
-              schema:
-                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
-              example:
-                error: "Not Found"
-                message: "Branch with id tcrn:branch:22222222-2222-2222-2222-222222222222 does not exist"
-                timestamp: "2024-11-15T12:00:00Z"
-
-        '400':
-          description: Bad request - invalid parameters
           content:
             application/json:
               schema:
@@ -2340,39 +2183,10 @@ components:
         vehicles:
           type: array
           items:
-            $ref: '../shared/schemas/vehicle.yaml#/VehicleWithBranch'
-          description: List of vehicles from different branches of the company
-        pagination:
-          $ref: '../shared/schemas/common.yaml#/PaginationInfo'
-
-    BranchVehiclesResponse:
-      type: object
-      required:
-        - vehicles
-        - branch
-        - pagination
-      properties:
-        vehicles:
-          type: array
-          items:
             $ref: '../shared/schemas/vehicle.yaml#/VehicleBase'
-          description: List of vehicles at the branch
-        branch:
-          $ref: '../shared/schemas/common.yaml#/BranchInfo'
-          description: The branch these vehicles belong to
+          description: List of vehicles from the company
         pagination:
           $ref: '../shared/schemas/common.yaml#/PaginationInfo'
-
-    CompanyBranchesResponse:
-      type: object
-      required:
-        - branches
-      properties:
-        branches:
-          type: array
-          items:
-            $ref: '../shared/schemas/common.yaml#/BranchInfo'
-          description: List of branches belonging to the company
 
     CancelReservationRequest:
       type: object
