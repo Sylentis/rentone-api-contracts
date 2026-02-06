@@ -1473,7 +1473,7 @@ paths:
       summary: Get all reservations for the company
       description: |
         Returns all reservations for vehicles belonging to the authenticated company.
-        Filter by status, branch, date range, and other criteria.
+        Filter by status, date range, and other criteria.
       operationId: getCompanyReservations
       parameters:
         # Fuzzy search (driver name, confirmation code, vehicle make/model)
@@ -1486,8 +1486,6 @@ paths:
           schema:
             $ref: '../shared/schemas/enums.yaml#/ReservationStatus'
           example: "pending"
-        # Branch filtering
-        - $ref: '../shared/parameters/common.yaml#/BranchIdQueryParam'
         # Date range filtering
         - name: pickupDateFrom
           in: query
