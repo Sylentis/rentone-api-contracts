@@ -405,14 +405,12 @@ paths:
         - Fleet Management
       summary: Get all company vehicles
       description: |
-        Returns all vehicles belonging to the authenticated company across all branches.
-        Companies can filter by branch, vehicle type, and availability status.
+        Returns all vehicles belonging to the authenticated company.
+        Companies can filter by vehicle type and availability status.
       operationId: getCompanyVehicles
       parameters:
         # Fuzzy search
         - $ref: '../shared/parameters/common.yaml#/SearchParam'
-        # Branch filtering
-        - $ref: '../shared/parameters/common.yaml#/BranchIdQueryParam'
         # Vehicle filters
         - $ref: '../shared/parameters/common.yaml#/VehicleTypeParam'
         - $ref: '../shared/parameters/common.yaml#/TransmissionParam'
@@ -449,10 +447,6 @@ paths:
                     currency: "PLN"
                     mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
                     available: true
-                    branch:
-                      id: "tcrn:branch:22222222-2222-2222-2222-222222222222"
-                      name: "Warsaw Downtown"
-                      city: "Warsaw"
                   - id: "tcrn:vehicle:4fa85f64-5717-4562-b3fc-2c963f66afa7"
                     make: "BMW"
                     model: "X5"
@@ -465,10 +459,6 @@ paths:
                     currency: "PLN"
                     mainImage: "https://cdn.example.com/vehicles/bmw-x5.jpg"
                     available: true
-                    branch:
-                      id: "tcrn:branch:33333333-3333-3333-3333-333333333333"
-                      name: "Warsaw Airport"
-                      city: "Warsaw"
                 pagination:
                   currentPage: 0
                   pageSize: 20
@@ -506,7 +496,6 @@ paths:
       summary: Add a new vehicle
       description: |
         Creates a new vehicle for the authenticated company.
-        The vehicle will be assigned to the specified branch.
       operationId: createVehicle
       requestBody:
         required: true
@@ -524,7 +513,6 @@ paths:
               seats: 5
               pricePerDay: 250.00
               currency: "PLN"
-              branchId: "tcrn:branch:22222222-2222-2222-2222-222222222222"
               mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
               available: true
 
@@ -549,10 +537,6 @@ paths:
                   currency: "PLN"
                   mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
                   available: true
-                  branch:
-                    id: "tcrn:branch:22222222-2222-2222-2222-222222222222"
-                    name: "Warsaw Downtown"
-                    city: "Warsaw"
                 message: "Vehicle created successfully"
 
         '400':
@@ -573,26 +557,15 @@ paths:
               schema:
                 $ref: '../shared/schemas/common.yaml#/ErrorResponse'
 
-        '403':
-          description: Forbidden - branch does not belong to the authenticated company
-          content:
-            application/json:
-              schema:
-                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
-              example:
-                error: "Forbidden"
-                message: "Branch does not belong to your company"
-                timestamp: "2024-11-15T12:00:00Z"
-
         '404':
-          description: Branch not found
+          description: Vehicle not found
           content:
             application/json:
               schema:
                 $ref: '../shared/schemas/common.yaml#/ErrorResponse'
               example:
                 error: "Not Found"
-                message: "Branch not found"
+                message: "Vehicle not found"
                 timestamp: "2024-11-15T12:00:00Z"
 
         '500':
@@ -646,10 +619,6 @@ paths:
                   - url: "https://cdn.example.com/vehicles/rav4-interior.jpg"
                     index: 1
                 available: true
-                branch:
-                  id: "tcrn:branch:22222222-2222-2222-2222-222222222222"
-                  name: "Warsaw Downtown"
-                  city: "Warsaw"
 
         '401':
           description: Unauthorized - invalid or missing authentication
@@ -749,10 +718,6 @@ paths:
                   features: ["GPS", "Bluetooth", "Backup Camera", "Heated Seats"]
                   mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
                   available: true
-                  branch:
-                    id: "tcrn:branch:22222222-2222-2222-2222-222222222222"
-                    name: "Warsaw Downtown"
-                    city: "Warsaw"
                 message: "Vehicle updated successfully"
 
         '400':
@@ -881,7 +846,7 @@ paths:
 
         **File format requirements:**
         - First row must be a header row with column names
-        - Required columns: make, model, year, vehicleType, transmission, fuelType, seats, pricePerDay, branchId
+        - Required columns: make, model, year, vehicleType, transmission, fuelType, seats, pricePerDay
         - Optional columns: currency, mainImage, available
 
         **Validation behavior:**
@@ -1035,7 +1000,7 @@ paths:
 
         **Export includes:**
         - All vehicle data for the authenticated company
-        - Optional filtering by branch, vehicle type, etc.
+        - Optional filtering by vehicle type, etc.
 
         **File format:**
         - Default: XLSX
@@ -1051,7 +1016,6 @@ paths:
             default: xlsx
           example: xlsx
         # Optional filters (same as GET /vehicles)
-        - $ref: '../shared/parameters/common.yaml#/BranchIdQueryParam'
         - $ref: '../shared/parameters/common.yaml#/VehicleTypeParam'
         - $ref: '../shared/parameters/common.yaml#/TransmissionParam'
         - $ref: '../shared/parameters/common.yaml#/FuelTypeParam'
@@ -1541,10 +1505,6 @@ paths:
                       model: "RAV4"
                       vehicleType: "suv"
                       mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
-                    branch:
-                      id: "tcrn:branch:22222222-2222-2222-2222-222222222222"
-                      name: "Warsaw Downtown"
-                      city: "Warsaw"
                     totalPrice: 1750.00
                     currency: "PLN"
                     expiresAt: "2024-12-16T10:00:00Z"
@@ -1565,10 +1525,6 @@ paths:
                       model: "X5"
                       vehicleType: "suv"
                       mainImage: "https://cdn.example.com/vehicles/bmw-x5.jpg"
-                    branch:
-                      id: "tcrn:branch:33333333-3333-3333-3333-333333333333"
-                      name: "Warsaw Airport"
-                      city: "Warsaw"
                     totalPrice: 3150.00
                     currency: "PLN"
                     createdAt: "2024-12-10T14:30:00Z"
@@ -1656,10 +1612,6 @@ paths:
                     fuelType: "hybrid"
                     seats: 5
                     mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
-                  branch:
-                    id: "tcrn:branch:22222222-2222-2222-2222-222222222222"
-                    name: "Warsaw Downtown"
-                    city: "Warsaw"
                     address: "ul. Marszałkowska 100, 00-001 Warszawa"
                     phone: "+48 22 123 4567"
                   company:
@@ -1795,11 +1747,6 @@ paths:
                   pricePerDay: 250.00
                   currency: "PLN"
                   mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
-                branch:
-                  id: "tcrn:branch:22222222-2222-2222-2222-222222222222"
-                  name: "Warsaw Downtown"
-                  city: "Warsaw"
-                  address: "ul. Marszałkowska 1"
                 company:
                   id: "tcrn:company:11111111-1111-1111-1111-111111111111"
                   name: "Rent-A-Car Poland"

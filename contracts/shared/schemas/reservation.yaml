@@ -165,7 +165,6 @@ ReservationDetails:
     - returnDate
     - driver
     - vehicle
-    - branch
     - company
     - totalPrice
     - currency
@@ -189,8 +188,6 @@ ReservationDetails:
       $ref: '#/DriverInfo'
     vehicle:
       $ref: '#/ReservationVehicleInfo'
-    branch:
-      $ref: 'common.yaml#/BranchInfo'
     company:
       $ref: 'common.yaml#/CompanyInfo'
     totalPrice:
@@ -451,7 +448,6 @@ CompanyReservationSummary:
     - returnDate
     - driver
     - vehicle
-    - branch
     - totalPrice
     - currency
     - createdAt
@@ -472,8 +468,6 @@ CompanyReservationSummary:
       $ref: '#/DriverInfo'
     vehicle:
       $ref: '#/ReservationVehicleSummary'
-    branch:
-      $ref: 'common.yaml#/BranchInfo'
     totalPrice:
       type: integer
       format: int64
@@ -645,7 +639,6 @@ CreateEmployeeReservationResponse:
   required:
     - reservation
     - vehicle
-    - branch
     - company
     - confirmationCode
     - message
@@ -654,8 +647,6 @@ CreateEmployeeReservationResponse:
       $ref: '#/ReservationDetails'
     vehicle:
       $ref: '#/ReservationVehicleInfo'
-    branch:
-      $ref: 'common.yaml#/BranchInfo'
     company:
       $ref: 'common.yaml#/CompanyInfo'
     confirmationCode:

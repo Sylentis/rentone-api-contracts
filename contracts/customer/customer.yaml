@@ -17,8 +17,6 @@ tags:
     description: Vehicle search and browsing operations
   - name: Companies
     description: Company information and details
-  - name: Branches
-    description: Branch and vehicle availability operations
   - name: Reservations
     description: Vehicle reservation operations for customers
   - name: Authentication
@@ -198,15 +196,14 @@ paths:
     get:
       tags:
         - Vehicles
-      summary: Search vehicles across all branches
+      summary: Search vehicles
       description: |
-        Search for vehicles across all branches in the system.
+        Search for vehicles in the system.
         Filter by city, availability dates, and vehicle characteristics.
       operationId: searchVehicles
       parameters:
         # Location filtering
         - $ref: '../shared/parameters/common.yaml#/CityParam'
-        - $ref: '../shared/parameters/common.yaml#/BranchIdQueryParam'
         # Availability filtering
         - $ref: '../shared/parameters/common.yaml#/PickupDateParam'
         - $ref: '../shared/parameters/common.yaml#/ReturnDateParam'
@@ -247,10 +244,6 @@ paths:
                     currency: "PLN"
                     mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
                     available: true
-                    branch:
-                      id: "tcrn:branch:22222222-2222-2222-2222-222222222222"
-                      name: "Warsaw Downtown"
-                      city: "Warsaw"
                     company:
                       id: "tcrn:company:11111111-1111-1111-1111-111111111111"
                       name: "Rent-A-Car Poland"
@@ -266,10 +259,6 @@ paths:
                     currency: "PLN"
                     mainImage: "https://cdn.example.com/vehicles/bmw-x5.jpg"
                     available: true
-                    branch:
-                      id: "tcrn:branch:33333333-3333-3333-3333-333333333333"
-                      name: "Warsaw Airport"
-                      city: "Warsaw"
                     company:
                       id: "tcrn:company:44444444-4444-4444-4444-444444444444"
                       name: "Premium Car Rental"
@@ -313,7 +302,7 @@ paths:
       summary: Get vehicle details by ID
       description: |
         Returns detailed information about a specific vehicle,
-        including full specifications, images, branch and company information.
+        including full specifications, images, and company information.
       operationId: getVehicleById
       parameters:
         - name: vehicleId
@@ -347,11 +336,6 @@ paths:
                   - "https://cdn.example.com/vehicles/rav4-2.jpg"
                 available: true
                 description: "Spacious and fuel-efficient SUV, perfect for family trips"
-                branch:
-                  id: "tcrn:branch:22222222-2222-2222-2222-222222222222"
-                  name: "Warsaw Downtown"
-                  city: "Warsaw"
-                  address: "ul. Marszałkowska 1, 00-001 Warszawa"
                 company:
                   id: "tcrn:company:11111111-1111-1111-1111-111111111111"
                   name: "Rent-A-Car Poland"
@@ -451,7 +435,7 @@ paths:
         - Vehicles
       summary: Get all vehicles for a specific company
       description: |
-        Returns all vehicles belonging to a specific rental company across all their branches.
+        Returns all vehicles belonging to a specific rental company.
         Optionally filter by availability dates and vehicle characteristics.
       operationId: getVehiclesByCompany
       parameters:
@@ -476,8 +460,7 @@ paths:
         - $ref: '../shared/parameters/common.yaml#/MinPriceParam'
         - $ref: '../shared/parameters/common.yaml#/MaxPriceParam'
         - $ref: '../shared/parameters/common.yaml#/MaxPricePerDayParam'
-        # Location filtering (within company)
-        - $ref: '../shared/parameters/common.yaml#/BranchIdQueryParam'
+        # Location filtering
         - $ref: '../shared/parameters/common.yaml#/CityParam'
         # Pagination
         - $ref: '../shared/parameters/common.yaml#/PageParam'
@@ -505,10 +488,6 @@ paths:
                     currency: "PLN"
                     mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
                     available: true
-                    branch:
-                      id: "tcrn:branch:22222222-2222-2222-2222-222222222222"
-                      name: "Warsaw Downtown"
-                      city: "Warsaw"
                   - id: "tcrn:vehicle:6fa85f64-5717-4562-b3fc-2c963f66afa9"
                     make: "Toyota"
                     model: "Corolla"
@@ -521,10 +500,6 @@ paths:
                     currency: "PLN"
                     mainImage: "https://cdn.example.com/vehicles/corolla.jpg"
                     available: true
-                    branch:
-                      id: "tcrn:branch:33333333-3333-3333-3333-333333333333"
-                      name: "Warsaw Airport"
-                      city: "Warsaw"
                 company:
                   id: "tcrn:company:11111111-1111-1111-1111-111111111111"
                   name: "Rent-A-Car Poland"
@@ -550,116 +525,6 @@ paths:
               example:
                 error: "Not Found"
                 message: "Company with id tcrn:company:11111111-1111-1111-1111-111111111111 does not exist"
-                timestamp: "2024-11-15T12:00:00Z"
-
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
-
-  /branches/{branchId}/vehicles:
-    get:
-      tags:
-        - Vehicles
-        - Branches
-      summary: Get vehicles for a specific branch
-      description: |
-        Returns a list of vehicles available at the specified branch.
-        Optionally filter by availability dates and vehicle characteristics.
-      operationId: getVehiclesByBranch
-      parameters:
-        # Path parameter
-        - name: branchId
-          in: path
-          required: true
-          description: Unique identifier of the branch (prefixed format)
-          schema:
-            $ref: '../shared/schemas/common.yaml#/BranchId'
-        # Availability filtering
-        - $ref: '../shared/parameters/common.yaml#/PickupDateParam'
-        - $ref: '../shared/parameters/common.yaml#/ReturnDateParam'
-        # Vehicle filters
-        - $ref: '../shared/parameters/common.yaml#/VehicleTypeParam'
-        - $ref: '../shared/parameters/common.yaml#/TransmissionParam'
-        - $ref: '../shared/parameters/common.yaml#/FuelTypeParam'
-        - $ref: '../shared/parameters/common.yaml#/MakeParam'
-        - $ref: '../shared/parameters/common.yaml#/ModelParam'
-        - $ref: '../shared/parameters/common.yaml#/MinSeatsParam'
-        - $ref: '../shared/parameters/common.yaml#/MaxSeatsParam'
-        - $ref: '../shared/parameters/common.yaml#/MinPriceParam'
-        - $ref: '../shared/parameters/common.yaml#/MaxPriceParam'
-        - $ref: '../shared/parameters/common.yaml#/MaxPricePerDayParam'
-        # Pagination
-        - $ref: '../shared/parameters/common.yaml#/PageParam'
-        - $ref: '../shared/parameters/common.yaml#/SizeParam'
-        - $ref: '../shared/parameters/common.yaml#/SortParam'
-
-      responses:
-        '200':
-          description: Successfully retrieved vehicles
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VehicleListResponse'
-              example:
-                vehicles:
-                  - id: "tcrn:vehicle:7fa85f64-5717-4562-b3fc-2c963f66afaa"
-                    make: "Toyota"
-                    model: "RAV4"
-                    year: 2023
-                    vehicleType: "suv"
-                    transmission: "automatic"
-                    fuelType: "hybrid"
-                    seats: 5
-                    pricePerDay: 250.00
-                    currency: "PLN"
-                    mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
-                    available: true
-                branch:
-                  id: "tcrn:branch:22222222-2222-2222-2222-222222222222"
-                  name: "Warsaw Downtown"
-                  city: "Warsaw"
-                  address: "ul. Marszałkowska 1"
-                company:
-                  id: "tcrn:company:11111111-1111-1111-1111-111111111111"
-                  name: "Rent-A-Car Poland"
-                pagination:
-                  currentPage: 0
-                  pageSize: 20
-                  totalElements: 8
-                  totalPages: 1
-
-        '400':
-          description: Bad request - invalid parameters
-          content:
-            application/json:
-              schema:
-                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
-              examples:
-                missingReturnDate:
-                  summary: Return date required when pickup date provided
-                  value:
-                    error: "Bad Request"
-                    message: "returnDate is required when pickupDate is provided"
-                    timestamp: "2024-11-15T12:00:00Z"
-                invalidDateRange:
-                  summary: Invalid date range
-                  value:
-                    error: "Bad Request"
-                    message: "returnDate must be after pickupDate"
-                    timestamp: "2024-11-15T12:00:00Z"
-
-        '404':
-          description: Branch not found
-          content:
-            application/json:
-              schema:
-                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
-              example:
-                error: "Not Found"
-                message: "Branch with id tcrn:branch:22222222-2222-2222-2222-222222222222 does not exist"
                 timestamp: "2024-11-15T12:00:00Z"
 
         '500':
@@ -733,10 +598,6 @@ paths:
                       pricePerDay: 250.00
                       currency: "PLN"
                       mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
-                    branch:
-                      id: "tcrn:branch:22222222-2222-2222-2222-222222222222"
-                      name: "Warsaw Downtown"
-                      city: "Warsaw"
                     company:
                       id: "tcrn:company:11111111-1111-1111-1111-111111111111"
                       name: "Rent-A-Car Poland"
@@ -827,10 +688,6 @@ paths:
                     pricePerDay: 250.00
                     currency: "PLN"
                     mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
-                  branch:
-                    id: "tcrn:branch:22222222-2222-2222-2222-222222222222"
-                    name: "Warsaw Downtown"
-                    city: "Warsaw"
                   company:
                     id: "tcrn:company:11111111-1111-1111-1111-111111111111"
                     name: "Rent-A-Car Poland"
@@ -955,11 +812,6 @@ paths:
                   pricePerDay: 250.00
                   currency: "PLN"
                   mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
-                branch:
-                  id: "tcrn:branch:22222222-2222-2222-2222-222222222222"
-                  name: "Warsaw Downtown"
-                  city: "Warsaw"
-                  address: "ul. Marszałkowska 1"
                 company:
                   id: "tcrn:company:11111111-1111-1111-1111-111111111111"
                   name: "Rent-A-Car Poland"
@@ -2550,7 +2402,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/VehicleSearchResult'
-          description: List of vehicles from potentially different branches and companies
+          description: List of vehicles from potentially different companies
         pagination:
           $ref: '../shared/schemas/common.yaml#/PaginationInfo'
 
@@ -2565,7 +2417,7 @@ components:
           type: array
           items:
             $ref: '../shared/schemas/vehicle.yaml#/VehicleBase'
-          description: List of vehicles from different branches of the same company
+          description: List of vehicles from the same company
         company:
           $ref: '../shared/schemas/common.yaml#/CompanyInfo'
           description: The company that owns all these vehicles
@@ -2576,7 +2428,6 @@ components:
       type: object
       required:
         - vehicles
-        - branch
         - company
         - pagination
       properties:
@@ -2584,27 +2435,21 @@ components:
           type: array
           items:
             $ref: '../shared/schemas/vehicle.yaml#/VehicleBase'
-          description: List of vehicles from the same branch
-        branch:
-          $ref: '../shared/schemas/common.yaml#/BranchInfo'
-          description: The branch these vehicles belong to
+          description: List of vehicles
         company:
           $ref: '../shared/schemas/common.yaml#/CompanyInfo'
-          description: The company that owns this branch
+          description: The company that owns these vehicles
         pagination:
           $ref: '../shared/schemas/common.yaml#/PaginationInfo'
 
-    # VehicleSearchResult = VehicleBase + branch + company
+    # VehicleSearchResult = VehicleBase + company
     VehicleSearchResult:
       allOf:
         - $ref: '../shared/schemas/vehicle.yaml#/VehicleBase'
         - type: object
           required:
-            - branch
             - company
           properties:
-            branch:
-              $ref: '../shared/schemas/common.yaml#/BranchInfo'
             company:
               $ref: '../shared/schemas/common.yaml#/CompanyInfo'
 
@@ -2614,7 +2459,6 @@ components:
         - $ref: '../shared/schemas/vehicle.yaml#/VehicleBase'
         - type: object
           required:
-            - branch
             - company
           properties:
             description:
@@ -2622,8 +2466,6 @@ components:
               nullable: true
               description: Vehicle description and additional information
               example: "Spacious and fuel-efficient SUV, perfect for family trips"
-            branch:
-              $ref: '../shared/schemas/common.yaml#/BranchInfo'
             company:
               $ref: '../shared/schemas/common.yaml#/CompanyInfo'
 
@@ -2874,11 +2716,6 @@ components:
           nullable: true
           description: Reserved vehicle ID
           example: "tcrn:vehicle:3fa85f64-5717-4562-b3fc-2c963f66afa6"
-        branchId:
-          type: string
-          nullable: true
-          description: Pickup branch ID
-          example: "tcrn:branch:22222222-2222-2222-2222-222222222222"
         companyId:
           type: string
           nullable: true

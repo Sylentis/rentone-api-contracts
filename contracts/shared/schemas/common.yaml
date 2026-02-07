@@ -7,12 +7,6 @@ VehicleId:
   description: Unique vehicle identifier in prefixed format (tcrn:vehicle:uuid)
   example: "tcrn:vehicle:3fa85f64-5717-4562-b3fc-2c963f66afa6"
 
-BranchId:
-  type: string
-  pattern: '^tcrn:branch:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-  description: Unique branch identifier in prefixed format (tcrn:branch:uuid)
-  example: "tcrn:branch:22222222-2222-2222-2222-222222222222"
-
 CompanyId:
   type: string
   pattern: '^tcrn:company:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
@@ -24,32 +18,6 @@ ReservationId:
   pattern: '^tcrn:reservation:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
   description: Unique reservation identifier in prefixed format (tcrn:reservation:uuid)
   example: "tcrn:reservation:aabbccdd-1122-3344-5566-778899aabbcc"
-
-BranchInfo:
-  type: object
-  required:
-    - id
-    - name
-    - city
-  properties:
-    id:
-      $ref: '#/BranchId'
-    name:
-      type: string
-      pattern: '^[a-zA-ZÀ-ž\s\-\.'']+$'
-      minLength: 1
-      maxLength: 100
-      description: Branch name
-      example: "Warsaw Downtown"
-    city:
-      type: string
-      description: City where the branch is located
-      example: "Warsaw"
-    address:
-      type: string
-      nullable: true
-      description: Full address of the branch
-      example: "ul. Marszałkowska 1, 00-001 Warszawa"
 
 CompanyInfo:
   type: object

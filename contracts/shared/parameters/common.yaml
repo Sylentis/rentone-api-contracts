@@ -132,14 +132,6 @@ CityParam:
     type: string
   example: "Warsaw"
 
-BranchIdQueryParam:
-  name: branchId
-  in: query
-  required: false
-  description: Filter by specific branch ID (prefixed format)
-  schema:
-    $ref: '../schemas/common.yaml#/BranchId'
-
 # Availability filtering
 PickupDateParam:
   name: pickupDate
