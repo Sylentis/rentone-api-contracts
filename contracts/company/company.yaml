@@ -23,6 +23,8 @@ tags:
     description: Company profile and settings management
   - name: Company User
     description: User role and permissions within a company
+  - name: Dashboard
+    description: Company dashboard metrics and analytics
 
 paths:
   # ==================== COMPANY PROFILE ====================
@@ -2116,6 +2118,96 @@ paths:
               schema:
                 $ref: '../shared/schemas/common.yaml#/ErrorResponse'
 
+  # ==================== DASHBOARD ====================
+  /dashboard/metrics:
+    get:
+      tags:
+        - Dashboard
+      summary: Get company dashboard metrics
+      description: |
+        Returns lightweight dashboard metrics for the authenticated company.
+
+        **Metrics included:**
+        - Vehicle statistics (total, available)
+        - Reservation statistics (active, pending, today's pickups)
+        - Revenue metrics (total for period)
+        - Recent reservations (last 5)
+
+        **Period filtering:**
+        - `today`: Only today's data
+        - `7days`: Last 7 days
+        - `30days`: Last 30 days (default)
+        - `thisMonth`: Current calendar month
+        - `allTime`: All historical data
+      operationId: getDashboardMetrics
+      parameters:
+        - name: period
+          in: query
+          required: false
+          description: "Time period for revenue filtering (default: 30days)"
+          schema:
+            type: string
+            enum: [today, 7days, 30days, thisMonth, allTime]
+            default: 30days
+          example: 30days
+
+      responses:
+        '200':
+          description: Dashboard metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardMetricsResponse'
+              example:
+                stats:
+                  totalVehicles: 45
+                  availableVehicles: 38
+                  activeReservations: 12
+                  pendingApproval: 3
+                  todayPickups: 2
+                  totalRevenue: 125000
+                  currency: "PLN"
+                recentReservations:
+                  - id: "tcrn:reservation:abc123"
+                    customer: "Jan Kowalski"
+                    vehicle: "Toyota RAV4"
+                    pickupDate: "2024-12-20T10:00:00Z"
+                    returnDate: "2024-12-27T10:00:00Z"
+                    status: "confirmed"
+                  - id: "tcrn:reservation:def456"
+                    customer: "Anna Nowak"
+                    vehicle: "BMW X5"
+                    pickupDate: "2024-12-22T09:00:00Z"
+                    returnDate: "2024-12-29T18:00:00Z"
+                    status: "pending"
+
+        '400':
+          description: Bad request - invalid period parameter
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                status: 400
+                error: "Bad Request"
+                errorCode: "INVALID_PERIOD"
+                message: "Invalid period: 'invalid'. Allowed values: today, 7days, 30days, thisMonth, allTime"
+                timestamp: "2024-12-15T10:00:00Z"
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
 components:
   # Company-specific response schemas
   schemas:
@@ -2141,6 +2233,121 @@ components:
           maxLength: 500
           description: Optional reason for cancelling the reservation
           example: "Vehicle is no longer available for the requested dates"
+
+    # Dashboard Schemas
+    DashboardMetricsResponse:
+      type: object
+      required:
+        - stats
+        - recentReservations
+      properties:
+        stats:
+          $ref: '#/components/schemas/DashboardStats'
+        recentReservations:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardReservation'
+          description: Last 5 reservations sorted by creation date
+          maxItems: 5
+
+    DashboardStats:
+      type: object
+      required:
+        - totalVehicles
+        - availableVehicles
+        - activeReservations
+        - pendingApproval
+        - todayPickups
+        - totalRevenue
+        - currency
+      properties:
+        totalVehicles:
+          type: integer
+          format: int32
+          description: Total number of vehicles in fleet
+          minimum: 0
+          example: 45
+        availableVehicles:
+          type: integer
+          format: int32
+          description: Number of available vehicles
+          minimum: 0
+          example: 38
+        activeReservations:
+          type: integer
+          format: int32
+          description: Number of active reservations (confirmed, modification_pending)
+          minimum: 0
+          example: 12
+        pendingApproval:
+          type: integer
+          format: int32
+          description: Number of reservations pending approval (pending, phone_verification_pending)
+          minimum: 0
+          example: 3
+        todayPickups:
+          type: integer
+          format: int32
+          description: Number of pickups scheduled for today
+          minimum: 0
+          example: 2
+        totalRevenue:
+          type: integer
+          format: int64
+          description: Total revenue in smallest currency unit (e.g., groszy for PLN)
+          minimum: 0
+          example: 125000
+        currency:
+          type: string
+          description: ISO 4217 currency code
+          pattern: '^[A-Z]{3}$'
+          example: "PLN"
+
+    DashboardReservation:
+      type: object
+      required:
+        - id
+        - customer
+        - vehicle
+        - pickupDate
+        - returnDate
+        - status
+      properties:
+        id:
+          type: string
+          description: Reservation ID (TCRN format)
+          pattern: '^tcrn:reservation:[a-f0-9-]+$'
+          example: "tcrn:reservation:abc123"
+        customer:
+          type: string
+          description: Customer full name
+          example: "Jan Kowalski"
+        vehicle:
+          type: string
+          description: Vehicle make and model
+          example: "Toyota RAV4"
+        pickupDate:
+          type: string
+          format: date-time
+          description: Pickup date and time (ISO 8601)
+          example: "2024-12-20T10:00:00Z"
+        returnDate:
+          type: string
+          format: date-time
+          description: Return date and time (ISO 8601)
+          example: "2024-12-27T10:00:00Z"
+        status:
+          type: string
+          description: Reservation status
+          enum:
+            - pending
+            - confirmed
+            - cancelled
+            - completed
+            - phone_verification_pending
+            - modification_pending
+            - no_show
+          example: "confirmed"
 
   securitySchemes:
     bearerAuth:
