@@ -66,6 +66,8 @@ ReservationSortOrder:
     - pickup_date_asc
     - pickup_date_desc
     - status
+    - customer_name_asc
+    - customer_name_desc
   description: Sort order for reservation listings
 
 CancellationSource:
