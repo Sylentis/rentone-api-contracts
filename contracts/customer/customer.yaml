@@ -3156,7 +3156,7 @@ components:
       properties:
         verificationType:
           type: string
-          enum: [EMAIL, PHONE, DRIVER_LICENSE, FULL]
+          enum: [EMAIL, PHONE, FULL]
           description: Type of verification to perform
           example: "FULL"
 
