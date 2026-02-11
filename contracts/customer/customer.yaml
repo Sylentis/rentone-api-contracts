@@ -1531,7 +1531,6 @@ paths:
         **Optional fields**:
         - dateOfBirth: Date of birth (ISO 8601 format)
         - address: Primary address
-        - driverLicense: Driver's license information
       operationId: createProfile
       security:
         - bearerAuth: []
@@ -1886,75 +1885,6 @@ paths:
                 $ref: '../shared/schemas/common.yaml#/ErrorResponse'
         '413':
           description: File too large
-          content:
-            application/json:
-              schema:
-                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
-
-  /profile/{id}/driver-license:
-    put:
-      tags:
-        - Profile
-      summary: Update driver license information
-      description: |
-        Update or add driver's license information to the profile.
-
-        **Authentication required**: This endpoint requires a valid JWT bearer token.
-
-        **Validation**:
-        - License must not be expired
-        - Issue date must be before expiry date
-        - Valid license number format required
-      operationId: updateDriverLicense
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: Profile ID
-          schema:
-            type: string
-            example: "tcrn:profile:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DriverLicenseRequest'
-      responses:
-        '200':
-          description: Driver license updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DriverLicenseResponse'
-        '400':
-          description: Bad request - validation error or expired license
-          content:
-            application/json:
-              schema:
-                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
-        '401':
-          description: Not authenticated
-          content:
-            application/json:
-              schema:
-                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
-        '403':
-          description: Forbidden - not authorized to update this profile
-          content:
-            application/json:
-              schema:
-                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
-        '404':
-          description: Profile not found
           content:
             application/json:
               schema:
@@ -2911,9 +2841,6 @@ components:
         address:
           $ref: '#/components/schemas/AddressRequest'
           nullable: true
-        driverLicense:
-          $ref: '#/components/schemas/DriverLicenseRequest'
-          nullable: true
 
     UpdateProfileRequest:
       type: object
@@ -3018,9 +2945,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AddressResponse'
-          nullable: true
-        driverLicense:
-          $ref: '#/components/schemas/DriverLicenseResponse'
           nullable: true
         defaultAddressId:
           type: string
@@ -3209,92 +3133,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AddressResponse'
-
-    DriverLicenseRequest:
-      type: object
-      required:
-        - licenseNumber
-        - issuingCountry
-        - expiryDate
-      properties:
-        licenseNumber:
-          type: string
-          minLength: 1
-          maxLength: 50
-          description: Driver's license number
-          example: "DL1234567890"
-        issuingCountry:
-          type: string
-          minLength: 2
-          maxLength: 100
-          description: Country that issued the license
-          example: "Poland"
-        issueDate:
-          type: string
-          format: date
-          nullable: true
-          description: Date the license was issued
-          example: "2019-01-15"
-        expiryDate:
-          type: string
-          format: date
-          description: License expiration date
-          example: "2029-01-15"
-        category:
-          type: string
-          nullable: true
-          description: License category (e.g., B for cars)
-          example: "B"
-
-    DriverLicenseResponse:
-      type: object
-      required:
-        - id
-        - licenseNumber
-        - issuingCountry
-        - expiryDate
-        - status
-      properties:
-        id:
-          type: string
-          example: "tcrn:driver-license:507f1f77-bcf8-6cd7-9943-9011aabbccdd"
-        licenseNumber:
-          type: string
-          example: "DL1234567890"
-        issuingCountry:
-          type: string
-          example: "Poland"
-        issueDate:
-          type: string
-          format: date
-          nullable: true
-          example: "2019-01-15"
-        expiryDate:
-          type: string
-          format: date
-          example: "2029-01-15"
-        category:
-          type: string
-          nullable: true
-          example: "B"
-        status:
-          type: string
-          enum: [ACTIVE, EXPIRED, SUSPENDED]
-          description: License status
-          example: "ACTIVE"
-        expired:
-          type: boolean
-          description: Whether the license is expired
-          example: false
-        createdAt:
-          type: string
-          format: date-time
-          example: "2024-01-15T10:00:00Z"
-        updatedAt:
-          type: string
-          format: date-time
-          nullable: true
-          example: "2024-01-20T14:30:00Z"
 
     AvatarUploadResponse:
       type: object
