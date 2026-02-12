@@ -1064,6 +1064,525 @@ paths:
               schema:
                 $ref: '../shared/schemas/common.yaml#/ErrorResponse'
 
+  # ==================== SMART IMPORT (AI-POWERED) ====================
+  /vehicles/smart-import:
+    post:
+      tags:
+        - Fleet Management
+      summary: Upload file for AI-powered smart import
+      description: |
+        Upload a CSV or Excel file for AI-powered vehicle import.
+
+        **Access Control:** Company Owner only.
+
+        **Flow:**
+        1. Upload file → Security validation (macros, injection)
+        2. AI maps columns to vehicle fields
+        3. Preview mapped vehicles with validation
+        4. Edit individual vehicles if needed
+        5. Confirm to import selected vehicles
+
+        **Supported formats:** CSV, XLSX, XLS
+        **Max file size:** Configurable (default 5MB)
+        **Max rows:** 500 per file
+
+        **Security features:**
+        - Magic byte validation (file type verification)
+        - CSV injection detection and sanitization
+        - Excel macro detection and rejection
+        - Rate limiting (2 uploads per minute per company)
+      operationId: uploadSmartImport
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV or Excel file to import. Max 5MB.
+      responses:
+        '202':
+          description: File accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/smart-import.yaml#/UploadSmartImportResponse'
+              example:
+                sessionId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                status: "processing"
+                message: "File uploaded. AI mapping in progress."
+        '400':
+          description: Bad request - invalid file
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              examples:
+                invalidFormat:
+                  summary: Invalid file format
+                  value:
+                    error: "Bad Request"
+                    message: "Unsupported file format. Allowed: csv, xlsx, xls"
+                    timestamp: "2024-12-15T12:00:00Z"
+                emptyFile:
+                  summary: Empty file
+                  value:
+                    error: "Bad Request"
+                    message: "File is empty or contains no data rows"
+                    timestamp: "2024-12-15T12:00:00Z"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden - user is not company owner
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                status: 403
+                error: "Forbidden"
+                errorCode: "NOT_COMPANY_OWNER"
+                message: "Smart Import is only available to company owners"
+                timestamp: "2024-12-15T12:00:00Z"
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                error: "Payload Too Large"
+                message: "File size exceeds maximum allowed (5MB)"
+                timestamp: "2024-12-15T12:00:00Z"
+        '422':
+          description: Security violation detected
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/smart-import.yaml#/SmartImportSecurityError'
+              examples:
+                macroDetected:
+                  summary: Malicious macro detected
+                  value:
+                    error: "Security Violation"
+                    errorCode: "MALICIOUS_MACRO"
+                    message: "File contains macros which are not allowed for security reasons"
+                    timestamp: "2024-12-15T12:00:00Z"
+                csvInjection:
+                  summary: CSV injection detected
+                  value:
+                    error: "Security Violation"
+                    errorCode: "CSV_INJECTION"
+                    message: "File contains potentially malicious formula injection"
+                    timestamp: "2024-12-15T12:00:00Z"
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                error: "Too Many Requests"
+                message: "Rate limit exceeded. Maximum 2 imports per minute."
+                timestamp: "2024-12-15T12:00:00Z"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /vehicles/smart-import/{sessionId}:
+    get:
+      tags:
+        - Fleet Management
+      summary: Get smart import session status
+      description: |
+        Retrieve the current status of a smart import session.
+        Poll this endpoint to check when AI mapping is complete.
+
+        **Access Control:** Company Owner only (session must belong to company).
+      operationId: getSmartImportSession
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          description: Smart import session ID
+          schema:
+            type: string
+            format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      responses:
+        '200':
+          description: Session details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/smart-import.yaml#/GetSmartImportSessionResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden - session belongs to different company
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Session not found or expired
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                error: "Not Found"
+                message: "Import session not found or has expired"
+                timestamp: "2024-12-15T12:00:00Z"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+    delete:
+      tags:
+        - Fleet Management
+      summary: Cancel smart import session
+      description: |
+        Cancel an in-progress smart import session.
+        This will discard any mapped vehicles and release resources.
+
+        **Access Control:** Company Owner only.
+      operationId: cancelSmartImport
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          description: Smart import session ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/smart-import.yaml#/CancelSmartImportResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '409':
+          description: Cannot cancel - import already in progress or completed
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                error: "Conflict"
+                message: "Cannot cancel session in status: importing"
+                timestamp: "2024-12-15T12:00:00Z"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /vehicles/smart-import/{sessionId}/mappings:
+    put:
+      tags:
+        - Fleet Management
+      summary: Update column mappings manually
+      description: |
+        Manually update how file columns map to vehicle fields.
+        Use this when AI mapping needs correction or AI failed and fallback is used.
+
+        After updating mappings, vehicles will be re-parsed with new mappings.
+
+        **Access Control:** Company Owner only.
+      operationId: updateSmartImportMappings
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          description: Smart import session ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../shared/schemas/smart-import.yaml#/UpdateColumnMappingsRequest'
+            example:
+              mappings:
+                - fileColumnIndex: 0
+                  vehicleField: "make"
+                - fileColumnIndex: 1
+                  vehicleField: "model"
+                - fileColumnIndex: 2
+                  vehicleField: "year"
+      responses:
+        '200':
+          description: Mappings updated, vehicles re-parsed
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/smart-import.yaml#/UpdateColumnMappingsResponse'
+        '400':
+          description: Invalid mapping configuration
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '409':
+          description: Session not in correct state for mapping updates
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /vehicles/smart-import/{sessionId}/vehicles/{vehicleIndex}:
+    patch:
+      tags:
+        - Fleet Management
+      summary: Update a vehicle candidate
+      description: |
+        Edit a specific vehicle candidate before confirming import.
+        Use this to fix validation errors or adjust parsed values.
+
+        **Access Control:** Company Owner only.
+      operationId: updateSmartImportVehicle
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          description: Smart import session ID
+          schema:
+            type: string
+            format: uuid
+        - name: vehicleIndex
+          in: path
+          required: true
+          description: Zero-based index of vehicle in candidates array
+          schema:
+            type: integer
+            minimum: 0
+          example: 0
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../shared/schemas/smart-import.yaml#/UpdateVehicleCandidateRequest'
+            example:
+              make: "Toyota"
+              model: "RAV4"
+              year: 2023
+              vehicleType: "suv"
+              transmission: "automatic"
+              fuelType: "hybrid"
+              seats: 5
+              pricePerDay: 25000
+              isSelected: true
+      responses:
+        '200':
+          description: Vehicle candidate updated
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/smart-import.yaml#/UpdateVehicleCandidateResponse'
+        '400':
+          description: Invalid vehicle data
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Session or vehicle not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '409':
+          description: Session not in correct state
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /vehicles/smart-import/{sessionId}/confirm:
+    post:
+      tags:
+        - Fleet Management
+      summary: Confirm and execute smart import
+      description: |
+        Confirm the import and create vehicles in the system.
+        Only valid and selected vehicles will be imported.
+
+        **Access Control:** Company Owner only.
+
+        **Note:** This action is irreversible. Once confirmed, vehicles
+        are created and cannot be bulk-reverted.
+      operationId: confirmSmartImport
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          description: Smart import session ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '../shared/schemas/smart-import.yaml#/ConfirmSmartImportRequest'
+            example:
+              selectedIndices: [0, 1, 3, 4]
+      responses:
+        '200':
+          description: Import completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/smart-import.yaml#/ConfirmSmartImportResponse'
+              example:
+                session:
+                  id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                  status: "completed"
+                  importedCount: 48
+                importedVehicleIds:
+                  - "tcrn:vehicle:11111111-1111-1111-1111-111111111111"
+                  - "tcrn:vehicle:22222222-2222-2222-2222-222222222222"
+                message: "Import completed. 48 vehicles imported."
+        '400':
+          description: No valid vehicles to import
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                error: "Bad Request"
+                message: "No valid vehicles selected for import"
+                timestamp: "2024-12-15T12:00:00Z"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '409':
+          description: Session not ready for confirmation
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              examples:
+                notReady:
+                  summary: Session not ready
+                  value:
+                    error: "Conflict"
+                    message: "Session is not ready for confirmation. Current status: processing"
+                    timestamp: "2024-12-15T12:00:00Z"
+                alreadyCompleted:
+                  summary: Already completed
+                  value:
+                    error: "Conflict"
+                    message: "Import has already been completed"
+                    timestamp: "2024-12-15T12:00:00Z"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
   # ==================== VEHICLE IMAGES ====================
   /vehicles/{vehicleId}/images:
     post:
