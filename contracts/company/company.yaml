@@ -1483,6 +1483,45 @@ paths:
               schema:
                 $ref: '../shared/schemas/common.yaml#/ErrorResponse'
 
+  /vehicles/smart-import/{sessionId}/apply-mappings:
+    post:
+      tags:
+        - Fleet Management
+      summary: Apply column mappings and parse vehicles
+      description: |
+        Apply the current column mappings and re-parse all vehicle candidates.
+        This step transitions the session from mapping to preview state.
+
+        **Access Control:** Company Owner only.
+      operationId: applySmartImportMappings
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          description: Smart import session ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Mappings applied successfully
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/smart-import.yaml#/GetSmartImportSessionResponse'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
   /vehicles/smart-import/{sessionId}/confirm:
     post:
       tags:
