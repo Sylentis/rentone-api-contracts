@@ -240,7 +240,7 @@ paths:
                     transmission: "automatic"
                     fuelType: "hybrid"
                     seats: 5
-                    pricePerDay: 250.00
+                    pricePerDay: 25000
                     currency: "PLN"
                     mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
                     available: true
@@ -255,7 +255,7 @@ paths:
                     transmission: "automatic"
                     fuelType: "diesel"
                     seats: 7
-                    pricePerDay: 450.00
+                    pricePerDay: 45000
                     currency: "PLN"
                     mainImage: "https://cdn.example.com/vehicles/bmw-x5.jpg"
                     available: true
@@ -328,7 +328,7 @@ paths:
                 transmission: "automatic"
                 fuelType: "hybrid"
                 seats: 5
-                pricePerDay: 250.00
+                pricePerDay: 25000
                 currency: "PLN"
                 mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
                 imageUrls:
@@ -484,7 +484,7 @@ paths:
                     transmission: "automatic"
                     fuelType: "hybrid"
                     seats: 5
-                    pricePerDay: 250.00
+                    pricePerDay: 25000
                     currency: "PLN"
                     mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
                     available: true
@@ -496,7 +496,7 @@ paths:
                     transmission: "automatic"
                     fuelType: "hybrid"
                     seats: 5
-                    pricePerDay: 150.00
+                    pricePerDay: 15000
                     currency: "PLN"
                     mainImage: "https://cdn.example.com/vehicles/corolla.jpg"
                     available: true
@@ -595,13 +595,13 @@ paths:
                       model: "RAV4"
                       year: 2023
                       vehicleType: "suv"
-                      pricePerDay: 250.00
+                      pricePerDay: 25000
                       currency: "PLN"
                       mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
                     company:
                       id: "tcrn:company:11111111-1111-1111-1111-111111111111"
                       name: "Rent-A-Car Poland"
-                    totalPrice: 1750.00
+                    totalPrice: 175000
                     currency: "PLN"
                     createdAt: "2024-12-15T10:00:00Z"
                 pagination:
@@ -685,13 +685,13 @@ paths:
                     model: "RAV4"
                     year: 2023
                     vehicleType: "suv"
-                    pricePerDay: 250.00
+                    pricePerDay: 25000
                     currency: "PLN"
                     mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
                   company:
                     id: "tcrn:company:11111111-1111-1111-1111-111111111111"
                     name: "Rent-A-Car Poland"
-                  totalPrice: 1750.00
+                  totalPrice: 175000
                   currency: "PLN"
                   notes: "Please have the car ready with a child seat"
                   expiresAt: "2024-12-16T10:00:00Z"
@@ -809,13 +809,13 @@ paths:
                   transmission: "automatic"
                   fuelType: "hybrid"
                   seats: 5
-                  pricePerDay: 250.00
+                  pricePerDay: 25000
                   currency: "PLN"
                   mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
                 company:
                   id: "tcrn:company:11111111-1111-1111-1111-111111111111"
                   name: "Rent-A-Car Poland"
-                totalPrice: 1750.00
+                totalPrice: 175000
                 currency: "PLN"
                 notes: "Please have the car ready with a child seat"
                 createdAt: "2024-12-15T10:00:00Z"

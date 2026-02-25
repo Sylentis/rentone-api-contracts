@@ -445,7 +445,7 @@ paths:
                     transmission: "automatic"
                     fuelType: "hybrid"
                     seats: 5
-                    pricePerDay: 250.00
+                    pricePerDay: 25000
                     currency: "PLN"
                     mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
                     available: true
@@ -457,7 +457,7 @@ paths:
                     transmission: "automatic"
                     fuelType: "diesel"
                     seats: 7
-                    pricePerDay: 450.00
+                    pricePerDay: 45000
                     currency: "PLN"
                     mainImage: "https://cdn.example.com/vehicles/bmw-x5.jpg"
                     available: true
@@ -513,7 +513,7 @@ paths:
               transmission: "automatic"
               fuelType: "hybrid"
               seats: 5
-              pricePerDay: 250.00
+              pricePerDay: 25000
               currency: "PLN"
               mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
               available: true
@@ -535,7 +535,7 @@ paths:
                   transmission: "automatic"
                   fuelType: "hybrid"
                   seats: 5
-                  pricePerDay: 250.00
+                  pricePerDay: 25000
                   currency: "PLN"
                   mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
                   available: true
@@ -610,7 +610,7 @@ paths:
                 transmission: "automatic"
                 fuelType: "hybrid"
                 seats: 5
-                pricePerDay: 250.00
+                pricePerDay: 25000
                 currency: "PLN"
                 description: "Spacious SUV perfect for family trips"
                 features: ["GPS", "Bluetooth", "Backup Camera"]
@@ -684,7 +684,7 @@ paths:
               updatePrice:
                 summary: Update price only
                 value:
-                  pricePerDay: 275.00
+                  pricePerDay: 27500
               updateAvailability:
                 summary: Update availability
                 value:
@@ -692,7 +692,7 @@ paths:
               updateMultiple:
                 summary: Update multiple fields
                 value:
-                  pricePerDay: 300.00
+                  pricePerDay: 30000
                   description: "Recently serviced, excellent condition"
                   features: ["GPS", "Bluetooth", "Backup Camera", "Heated Seats"]
                   available: true
@@ -714,7 +714,7 @@ paths:
                   transmission: "automatic"
                   fuelType: "hybrid"
                   seats: 5
-                  pricePerDay: 300.00
+                  pricePerDay: 30000
                   currency: "PLN"
                   description: "Recently serviced, excellent condition"
                   features: ["GPS", "Bluetooth", "Backup Camera", "Heated Seats"]
@@ -2065,7 +2065,7 @@ paths:
                       model: "RAV4"
                       vehicleType: "suv"
                       mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
-                    totalPrice: 1750.00
+                    totalPrice: 175000
                     currency: "PLN"
                     expiresAt: "2024-12-16T10:00:00Z"
                     createdAt: "2024-12-15T10:00:00Z"
@@ -2085,7 +2085,7 @@ paths:
                       model: "X5"
                       vehicleType: "suv"
                       mainImage: "https://cdn.example.com/vehicles/bmw-x5.jpg"
-                    totalPrice: 3150.00
+                    totalPrice: 315000
                     currency: "PLN"
                     createdAt: "2024-12-10T14:30:00Z"
                 pagination:
@@ -2304,13 +2304,13 @@ paths:
                   transmission: "automatic"
                   fuelType: "hybrid"
                   seats: 5
-                  pricePerDay: 250.00
+                  pricePerDay: 25000
                   currency: "PLN"
                   mainImage: "https://cdn.example.com/vehicles/rav4.jpg"
                 company:
                   id: "tcrn:company:11111111-1111-1111-1111-111111111111"
                   name: "Rent-A-Car Poland"
-                totalPrice: 1750.00
+                totalPrice: 175000
                 currency: "PLN"
                 notes: "Please have the car ready with a child seat"
                 expiresAt: "2024-12-16T10:00:00Z"
@@ -2895,17 +2895,7 @@ components:
           description: Return date and time (ISO 8601)
           example: "2024-12-27T10:00:00Z"
         status:
-          type: string
-          description: Reservation status
-          enum:
-            - pending
-            - confirmed
-            - cancelled
-            - completed
-            - phone_verification_pending
-            - modification_pending
-            - no_show
-          example: "confirmed"
+          $ref: '../shared/schemas/enums.yaml#/ReservationStatus'
 
   securitySchemes:
     bearerAuth:
