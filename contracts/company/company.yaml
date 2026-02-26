@@ -8,6 +8,14 @@ info:
   contact:
     name: RNT-ALPH Team
 
+# TODO: The following backend endpoints need OpenAPI contract definitions:
+# - Analytics: GET /analytics/summary, GET /analytics/export/csv, GET /analytics/export/pdf
+# - Vehicle Quality: POST /vehicles/{id}/submit, GET /vehicles/{id}/quality-status,
+#   GET /vehicles/{id}/validate, GET /quality-metrics, POST /quality-metrics/recalculate
+# - Support Tickets: POST /support/tickets, GET /support/tickets, GET /support/tickets/{id},
+#   POST /support/tickets/{id}/reply, PATCH /support/tickets/{id}/status, GET /support/tickets/counts
+# - Admin endpoints are internal-only and may not need contracts
+
 servers:
   - url: http://localhost:9847/api/v1/company
     description: Local development server
@@ -2902,7 +2910,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token for company authentication
+      description: Firebase JWT token with COMPANY role custom claim
 
 security:
   - bearerAuth: []

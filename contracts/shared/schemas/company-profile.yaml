@@ -62,7 +62,7 @@ CompanyProfile:
       nullable: true
       description: Average customer rating in tenths (e.g., 45 = 4.5 stars, range 10-50)
       readOnly: true
-      minimum: 10
+      minimum: 0
       maximum: 50
       example: 45
     reviewCount:
