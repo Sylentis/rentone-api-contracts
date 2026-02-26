@@ -228,7 +228,6 @@ paths:
             enum:
               - csv
               - xlsx
-              - pdf
           example: "csv"
         - name: companyId
           in: query
@@ -262,10 +261,6 @@ paths:
                 type: string
                 format: binary
             application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
-              schema:
-                type: string
-                format: binary
-            application/pdf:
               schema:
                 type: string
                 format: binary
