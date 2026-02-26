@@ -8,14 +8,6 @@ info:
   contact:
     name: RNT-ALPH Team
 
-# TODO: The following backend endpoints need OpenAPI contract definitions:
-# - Analytics: GET /analytics/summary, GET /analytics/export/csv, GET /analytics/export/pdf
-# - Vehicle Quality: POST /vehicles/{id}/submit, GET /vehicles/{id}/quality-status,
-#   GET /vehicles/{id}/validate, GET /quality-metrics, POST /quality-metrics/recalculate
-# - Support Tickets: POST /support/tickets, GET /support/tickets, GET /support/tickets/{id},
-#   POST /support/tickets/{id}/reply, PATCH /support/tickets/{id}/status, GET /support/tickets/counts
-# - Admin endpoints are internal-only and may not need contracts
-
 servers:
   - url: http://localhost:9847/api/v1/company
     description: Local development server
@@ -33,6 +25,16 @@ tags:
     description: User role and permissions within a company
   - name: Dashboard
     description: Company dashboard metrics and analytics
+  - name: Analytics
+    description: Company analytics summary and data export
+  - name: Vehicle Quality
+    description: Vehicle quality control and company quality metrics
+  - name: Support Tickets
+    description: Support ticket management for companies
+  - name: Onboarding
+    description: Company onboarding status and step completion
+  - name: User Profile
+    description: Company user profile management
 
 paths:
   # ==================== COMPANY PROFILE ====================
@@ -2774,6 +2776,1327 @@ paths:
               schema:
                 $ref: '../shared/schemas/common.yaml#/ErrorResponse'
 
+  # ==================== ANALYTICS ====================
+  /analytics/summary:
+    get:
+      tags:
+        - Analytics
+      summary: Get analytics summary
+      description: |
+        Retrieves complete analytics summary for the authenticated company.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with COMPANY role.
+
+        **Caching**: Responses are cached for 5 minutes to reduce database load.
+
+        **Metrics included:**
+        - Revenue metrics with tier breakdown (DAILY/WEEKLY/MONTHLY)
+        - Vehicle performance and utilization rates
+        - Monthly statistics and trends
+        - Top 10 performing vehicles
+        - Time-series data for charts (revenue, reservations)
+        - Vehicle type distribution (pie chart data)
+        - Availability heatmap
+      operationId: getAnalyticsSummary
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          description: Start of analytics period (ISO 8601 date-time format)
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-01T00:00:00Z"
+        - name: endDate
+          in: query
+          required: true
+          description: End of analytics period (ISO 8601 date-time format)
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-31T23:59:59Z"
+        - name: vehicleTypes
+          in: query
+          required: false
+          description: Optional filter by vehicle types
+          schema:
+            type: array
+            items:
+              type: string
+          example: ["SEDAN", "SUV"]
+        - name: statuses
+          in: query
+          required: false
+          description: Optional filter by reservation statuses
+          schema:
+            type: array
+            items:
+              $ref: '../shared/schemas/enums.yaml#/ReservationStatus'
+        - name: currency
+          in: query
+          required: false
+          description: "Currency code (default: PLN)"
+          schema:
+            type: string
+            pattern: '^[A-Z]{3}$'
+            default: PLN
+          example: "PLN"
+      responses:
+        '200':
+          description: Analytics summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsSummaryResponse'
+              example:
+                revenue:
+                  totalBrutto: 5250000
+                  dailyTierRevenue: 1500000
+                  weeklyTierRevenue: 2000000
+                  monthlyTierRevenue: 1750000
+                  forecastedRevenue: 6000000
+                  growthPercentage: 12.5
+                vehicles:
+                  topVehicles:
+                    - vehicleId: "tcrn:vehicle:aabbccdd-1122-3344-5566-778899aabbcc"
+                      vehicleName: "Toyota RAV4 2023"
+                      licensePlate: "WA 12345"
+                      totalRevenue: 350000
+                      reservationCount: 15
+                      utilizationRate: 85.5
+                      averageDailyRate: 25000
+                      rank: 1
+                  utilizationRate: 72.3
+                  averageRevenuePerVehicle: 116667
+                  averageDailyRate: 20000
+                  totalVehicles: 45
+                  vehiclesRented: 32
+                monthly:
+                  momGrowthPercentage: 8.5
+                  seasonalityIndex:
+                    JANUARY: 0.85
+                    JULY: 1.45
+                  conversionRate: 65.0
+                  cancellationRate: 12.0
+                  noShowRate: 3.0
+                  totalReservations: 120
+                  confirmedReservations: 78
+                  cancelledReservations: 14
+                  noShowReservations: 4
+                revenueTimeSeries:
+                  - date: "2024-01-01"
+                    revenue: 175000
+                    label: "Jan 1"
+                reservationTimeSeries:
+                  - date: "2024-01-01"
+                    count: 5
+                    label: "Jan 1"
+                vehicleTypeDistribution:
+                  - vehicleType: "SUV"
+                    count: 15
+                    revenue: 2100000
+                    percentage: 40.0
+                availabilityHeatmap:
+                  - dayOfWeek: "MONDAY"
+                    hour: 10
+                    availableCount: 30
+                    rentedCount: 15
+                    utilizationRate: 33.3
+                calculatedAt: "2024-01-31T12:00:00Z"
+                currency: "PLN"
+
+        '400':
+          description: Bad request - invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /analytics/export/csv:
+    get:
+      tags:
+        - Analytics
+      summary: Export analytics to CSV
+      description: |
+        Exports analytics summary to CSV format for the authenticated company.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with COMPANY role.
+
+        Returns a CSV file download with analytics data.
+      operationId: exportAnalyticsToCsv
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          description: Start of analytics period (ISO 8601 date-time format)
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-01T00:00:00Z"
+        - name: endDate
+          in: query
+          required: true
+          description: End of analytics period (ISO 8601 date-time format)
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-31T23:59:59Z"
+        - name: vehicleTypes
+          in: query
+          required: false
+          description: Optional filter by vehicle types
+          schema:
+            type: array
+            items:
+              type: string
+        - name: statuses
+          in: query
+          required: false
+          description: Optional filter by reservation statuses
+          schema:
+            type: array
+            items:
+              $ref: '../shared/schemas/enums.yaml#/ReservationStatus'
+        - name: currency
+          in: query
+          required: false
+          description: "Currency code (default: PLN)"
+          schema:
+            type: string
+            pattern: '^[A-Z]{3}$'
+            default: PLN
+      responses:
+        '200':
+          description: CSV export generated successfully
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              description: Attachment filename for the exported file
+              schema:
+                type: string
+              example: 'attachment; filename="analytics-export.csv"'
+
+        '400':
+          description: Bad request - invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /analytics/export/pdf:
+    get:
+      tags:
+        - Analytics
+      summary: Export analytics to PDF
+      description: |
+        Exports analytics summary to PDF format for the authenticated company.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with COMPANY role.
+
+        Returns a PDF file download with analytics report.
+      operationId: exportAnalyticsToPdf
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          description: Start of analytics period (ISO 8601 date-time format)
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-01T00:00:00Z"
+        - name: endDate
+          in: query
+          required: true
+          description: End of analytics period (ISO 8601 date-time format)
+          schema:
+            type: string
+            format: date-time
+          example: "2024-01-31T23:59:59Z"
+        - name: vehicleTypes
+          in: query
+          required: false
+          description: Optional filter by vehicle types
+          schema:
+            type: array
+            items:
+              type: string
+        - name: statuses
+          in: query
+          required: false
+          description: Optional filter by reservation statuses
+          schema:
+            type: array
+            items:
+              $ref: '../shared/schemas/enums.yaml#/ReservationStatus'
+        - name: currency
+          in: query
+          required: false
+          description: "Currency code (default: PLN)"
+          schema:
+            type: string
+            pattern: '^[A-Z]{3}$'
+            default: PLN
+      responses:
+        '200':
+          description: PDF export generated successfully
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              description: Attachment filename for the exported file
+              schema:
+                type: string
+              example: 'attachment; filename="analytics-export.pdf"'
+
+        '400':
+          description: Bad request - invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  # ==================== VEHICLE QUALITY ====================
+  /vehicles/{vehicleId}/submit:
+    post:
+      tags:
+        - Vehicle Quality
+      summary: Submit vehicle for quality review
+      description: |
+        Submits a vehicle for quality review.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with COMPANY role.
+
+        The vehicle must be in DRAFT or REJECTED status and must pass validation before submission.
+        The vehicle must belong to the authenticated company.
+      operationId: submitVehicleForReview
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          description: The vehicle identifier
+          schema:
+            type: string
+          example: "tcrn:vehicle:3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      responses:
+        '200':
+          description: Vehicle submitted for review successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitVehicleForReviewResponse'
+              example:
+                qualityStatus:
+                  vehicleId: "tcrn:vehicle:3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                  listingStatus: "PENDING_REVIEW"
+                  statusDescription: "Vehicle is awaiting quality review"
+                  submittedForReviewAt: "2024-01-15T10:00:00Z"
+                  reviewedAt: null
+                  reviewedBy: null
+                  rejectionReason: null
+                  photoQualityScore: 85
+                  listingCompletenessScore: 92
+                  overallQualityScore: 88
+                  customerRating: null
+                  customerReviewCount: 0
+                  canSubmitForReview: false
+                message: "Vehicle successfully submitted for quality review"
+
+        '400':
+          description: Bad request - vehicle cannot be submitted (validation errors or invalid status)
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                status: 400
+                error: "Bad Request"
+                errorCode: "VALIDATION_ERROR"
+                message: "Vehicle cannot be submitted: photos: At least 3 photos are required"
+                timestamp: "2024-01-15T12:00:00Z"
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '403':
+          description: Forbidden - vehicle does not belong to the authenticated company
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '404':
+          description: Vehicle not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /vehicles/{vehicleId}/quality-status:
+    get:
+      tags:
+        - Vehicle Quality
+      summary: Get vehicle quality status
+      description: |
+        Gets the quality status of a vehicle.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with COMPANY role.
+
+        Returns the current listing status, quality scores, review information, and whether
+        the vehicle can be submitted for review.
+      operationId: getVehicleQualityStatus
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          description: The vehicle identifier
+          schema:
+            type: string
+          example: "tcrn:vehicle:3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      responses:
+        '200':
+          description: Vehicle quality status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleQualityStatus'
+              example:
+                vehicleId: "tcrn:vehicle:3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                listingStatus: "APPROVED"
+                statusDescription: "Vehicle is approved and visible to customers"
+                submittedForReviewAt: "2024-01-10T10:00:00Z"
+                reviewedAt: "2024-01-11T14:30:00Z"
+                reviewedBy: "admin-user-123"
+                rejectionReason: null
+                photoQualityScore: 90
+                listingCompletenessScore: 95
+                overallQualityScore: 92
+                customerRating: 4.5
+                customerReviewCount: 12
+                canSubmitForReview: false
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '403':
+          description: Forbidden - vehicle does not belong to the authenticated company
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '404':
+          description: Vehicle not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /vehicles/{vehicleId}/validate:
+    get:
+      tags:
+        - Vehicle Quality
+      summary: Validate vehicle for submission
+      description: |
+        Validates a vehicle to check if it's ready for quality review submission.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with COMPANY role.
+
+        Returns validation errors and completeness score without actually submitting the vehicle.
+        Use this endpoint to preview what would happen when submitting.
+      operationId: validateVehicle
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          description: The vehicle identifier
+          schema:
+            type: string
+          example: "tcrn:vehicle:3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      responses:
+        '200':
+          description: Validation result retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleValidationResult'
+              example:
+                vehicleId: "tcrn:vehicle:3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                isValid: false
+                completenessScore: 75
+                errors:
+                  - field: "photos"
+                    message: "At least 3 photos are required"
+                  - field: "description"
+                    message: "Description must be at least 50 characters"
+                message: "Vehicle has 2 validation errors and cannot be submitted"
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '403':
+          description: Forbidden - vehicle does not belong to the authenticated company
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '404':
+          description: Vehicle not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /quality-metrics:
+    get:
+      tags:
+        - Vehicle Quality
+      summary: Get company quality metrics
+      description: |
+        Gets quality metrics for the authenticated company.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with COMPANY role.
+
+        Returns aggregated metrics including quality score, tier, performance indicators,
+        and customer satisfaction data.
+      operationId: getCompanyQualityMetrics
+      responses:
+        '200':
+          description: Quality metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyQualityMetrics'
+              example:
+                companyId: "tcrn:company:11111111-1111-1111-1111-111111111111"
+                qualityScore: 78
+                tier: "GOLD"
+                tierDescription: "Premium tier (score 70-84)"
+                pointsToNextTier: 7
+                avgResponseTimeHours: 2.5
+                acceptanceRate: 0.92
+                avgCustomerRating: 4.3
+                totalReviews: 87
+                totalBookings: 245
+                completedBookings: 230
+                completionRate: 93.9
+                cancelledByPartner: 5
+                totalDisputes: 3
+                disputesLostByPartner: 1
+                lastCalculatedAt: "2024-01-15T10:00:00Z"
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /quality-metrics/recalculate:
+    post:
+      tags:
+        - Vehicle Quality
+      summary: Recalculate company quality metrics
+      description: |
+        Forces a recalculation of quality metrics for the authenticated company.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with COMPANY role.
+
+        Recalculates the quality score based on current data and returns updated metrics.
+      operationId: recalculateQualityMetrics
+      responses:
+        '200':
+          description: Quality metrics recalculated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyQualityMetrics'
+              example:
+                companyId: "tcrn:company:11111111-1111-1111-1111-111111111111"
+                qualityScore: 80
+                tier: "GOLD"
+                tierDescription: "Premium tier (score 70-84)"
+                pointsToNextTier: 5
+                avgResponseTimeHours: 2.3
+                acceptanceRate: 0.93
+                avgCustomerRating: 4.4
+                totalReviews: 89
+                totalBookings: 250
+                completedBookings: 235
+                completionRate: 94.0
+                cancelledByPartner: 5
+                totalDisputes: 3
+                disputesLostByPartner: 1
+                lastCalculatedAt: "2024-01-16T10:00:00Z"
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  # ==================== SUPPORT TICKETS ====================
+  /support/tickets:
+    post:
+      tags:
+        - Support Tickets
+      summary: Create a support ticket
+      description: |
+        Creates a new support ticket for the authenticated company.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with COMPANY role.
+      operationId: createSupportTicket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSupportTicketRequest'
+            example:
+              subject: "Unable to upload vehicle photos"
+              description: "When trying to upload photos for my Toyota RAV4, I get an error message saying 'File too large' even though the photos are under 5MB."
+              category: "technical"
+              priority: "medium"
+      responses:
+        '201':
+          description: Support ticket created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupportTicket'
+              example:
+                id: "tcrn:ticket:aabbccdd-1122-3344-5566-778899aabbcc"
+                companyId: "tcrn:company:11111111-1111-1111-1111-111111111111"
+                createdById: "user-123"
+                subject: "Unable to upload vehicle photos"
+                description: "When trying to upload photos for my Toyota RAV4, I get an error message saying 'File too large' even though the photos are under 5MB."
+                category: "technical"
+                priority: "medium"
+                status: "open"
+                assignedTo: null
+                firstResponseAt: null
+                resolvedAt: null
+                slaResponseDue: "2024-01-15T20:00:00Z"
+                slaResolutionDue: "2024-01-17T12:00:00Z"
+                slaResponseBreached: false
+                slaResolutionBreached: false
+                createdAt: "2024-01-15T12:00:00Z"
+                updatedAt: "2024-01-15T12:00:00Z"
+                messageCount: 0
+
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                status: 400
+                error: "Bad Request"
+                errorCode: "VALIDATION_ERROR"
+                message: "Subject is required"
+                timestamp: "2024-01-15T12:00:00Z"
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+    get:
+      tags:
+        - Support Tickets
+      summary: List support tickets
+      description: |
+        Gets all support tickets for the authenticated company with optional status filtering
+        and pagination.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with COMPANY role.
+
+        Results are sorted by creation date in descending order (newest first).
+      operationId: listSupportTickets
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Optional filter by ticket status
+          schema:
+            type: string
+            enum:
+              - open
+              - in_progress
+              - waiting_customer
+              - resolved
+              - closed
+        - name: page
+          in: query
+          required: false
+          description: Page number (0-indexed)
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          example: 0
+        - name: size
+          in: query
+          required: false
+          description: Number of items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          example: 20
+      responses:
+        '200':
+          description: Support tickets listed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupportTicketListResponse'
+              example:
+                tickets:
+                  - id: "tcrn:ticket:aabbccdd-1122-3344-5566-778899aabbcc"
+                    companyId: "tcrn:company:11111111-1111-1111-1111-111111111111"
+                    createdById: "user-123"
+                    subject: "Unable to upload vehicle photos"
+                    description: "When trying to upload photos..."
+                    category: "technical"
+                    priority: "medium"
+                    status: "open"
+                    assignedTo: null
+                    firstResponseAt: null
+                    resolvedAt: null
+                    slaResponseDue: "2024-01-15T20:00:00Z"
+                    slaResolutionDue: "2024-01-17T12:00:00Z"
+                    slaResponseBreached: false
+                    slaResolutionBreached: false
+                    createdAt: "2024-01-15T12:00:00Z"
+                    updatedAt: "2024-01-15T12:00:00Z"
+                    messageCount: 2
+                page: 0
+                size: 20
+                totalElements: 1
+                totalPages: 1
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /support/tickets/{id}:
+    get:
+      tags:
+        - Support Tickets
+      summary: Get support ticket details
+      description: |
+        Gets a single support ticket by ID with its full message history.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with COMPANY role.
+
+        The ticket must belong to the authenticated company.
+      operationId: getSupportTicket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ticket identifier
+          schema:
+            type: string
+          example: "tcrn:ticket:aabbccdd-1122-3344-5566-778899aabbcc"
+      responses:
+        '200':
+          description: Ticket details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupportTicketDetailResponse'
+              example:
+                ticket:
+                  id: "tcrn:ticket:aabbccdd-1122-3344-5566-778899aabbcc"
+                  companyId: "tcrn:company:11111111-1111-1111-1111-111111111111"
+                  createdById: "user-123"
+                  subject: "Unable to upload vehicle photos"
+                  description: "When trying to upload photos..."
+                  category: "technical"
+                  priority: "medium"
+                  status: "in_progress"
+                  assignedTo: "support-agent-456"
+                  firstResponseAt: "2024-01-15T14:00:00Z"
+                  resolvedAt: null
+                  slaResponseDue: "2024-01-15T20:00:00Z"
+                  slaResolutionDue: "2024-01-17T12:00:00Z"
+                  slaResponseBreached: false
+                  slaResolutionBreached: false
+                  createdAt: "2024-01-15T12:00:00Z"
+                  updatedAt: "2024-01-15T14:00:00Z"
+                  messageCount: 2
+                messages:
+                  - id: "tcrn:message:11223344-5566-7788-99aa-bbccddeeff00"
+                    ticketId: "tcrn:ticket:aabbccdd-1122-3344-5566-778899aabbcc"
+                    authorType: "SUPPORT"
+                    authorId: "support-agent-456"
+                    authorName: "Support Team"
+                    message: "Thank you for reaching out. We are investigating the issue."
+                    isInternal: false
+                    createdAt: "2024-01-15T14:00:00Z"
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /support/tickets/{id}/reply:
+    post:
+      tags:
+        - Support Tickets
+      summary: Add reply to support ticket
+      description: |
+        Adds a reply/message to an existing support ticket.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with COMPANY role.
+
+        The ticket must belong to the authenticated company.
+      operationId: addTicketReply
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ticket identifier
+          schema:
+            type: string
+          example: "tcrn:ticket:aabbccdd-1122-3344-5566-778899aabbcc"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddTicketMessageRequest'
+            example:
+              message: "I've tried with smaller files and still getting the same error. Here's the exact error message..."
+              isInternal: false
+      responses:
+        '201':
+          description: Reply added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketMessage'
+              example:
+                id: "tcrn:message:22334455-6677-8899-aabb-ccddeeff0011"
+                ticketId: "tcrn:ticket:aabbccdd-1122-3344-5566-778899aabbcc"
+                authorType: "COMPANY"
+                authorId: "user-123"
+                authorName: "Jan Kowalski"
+                message: "I've tried with smaller files and still getting the same error."
+                isInternal: false
+                createdAt: "2024-01-15T15:30:00Z"
+
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                status: 400
+                error: "Bad Request"
+                errorCode: "VALIDATION_ERROR"
+                message: "Message is required"
+                timestamp: "2024-01-15T12:00:00Z"
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /support/tickets/{id}/status:
+    patch:
+      tags:
+        - Support Tickets
+      summary: Update ticket status
+      description: |
+        Updates the status of a support ticket.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with COMPANY role.
+
+        The ticket must belong to the authenticated company.
+
+        **Valid status transitions:**
+        - open -> in_progress, waiting_customer, resolved, closed
+        - in_progress -> waiting_customer, resolved, closed
+        - waiting_customer -> in_progress, resolved, closed
+        - resolved -> closed, in_progress
+        - closed -> (no transitions allowed)
+      operationId: updateTicketStatus
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ticket identifier
+          schema:
+            type: string
+          example: "tcrn:ticket:aabbccdd-1122-3344-5566-778899aabbcc"
+        - name: status
+          in: query
+          required: true
+          description: The new ticket status
+          schema:
+            type: string
+            enum:
+              - open
+              - in_progress
+              - waiting_customer
+              - resolved
+              - closed
+          example: "resolved"
+      responses:
+        '200':
+          description: Ticket status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupportTicket'
+              example:
+                id: "tcrn:ticket:aabbccdd-1122-3344-5566-778899aabbcc"
+                companyId: "tcrn:company:11111111-1111-1111-1111-111111111111"
+                createdById: "user-123"
+                subject: "Unable to upload vehicle photos"
+                description: "When trying to upload photos..."
+                category: "technical"
+                priority: "medium"
+                status: "resolved"
+                assignedTo: "support-agent-456"
+                firstResponseAt: "2024-01-15T14:00:00Z"
+                resolvedAt: "2024-01-16T09:00:00Z"
+                slaResponseDue: "2024-01-15T20:00:00Z"
+                slaResolutionDue: "2024-01-17T12:00:00Z"
+                slaResponseBreached: false
+                slaResolutionBreached: false
+                createdAt: "2024-01-15T12:00:00Z"
+                updatedAt: "2024-01-16T09:00:00Z"
+                messageCount: 4
+
+        '400':
+          description: Bad request - invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '404':
+          description: Ticket not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /support/tickets/counts:
+    get:
+      tags:
+        - Support Tickets
+      summary: Get ticket status counts
+      description: |
+        Gets ticket status counts for the authenticated company.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with COMPANY role.
+
+        Returns the number of tickets in each status plus active and total counts.
+      operationId: getTicketStatusCounts
+      responses:
+        '200':
+          description: Ticket status counts retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketStatusCounts'
+              example:
+                open: 3
+                inProgress: 2
+                waitingCustomer: 1
+                resolved: 5
+                closed: 12
+                total: 23
+                active: 6
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  # ==================== ONBOARDING ====================
+  /onboarding/status:
+    get:
+      tags:
+        - Onboarding
+      summary: Get onboarding status
+      description: |
+        Gets the current onboarding status for the authenticated company.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with COMPANY role.
+
+        Returns the completion status of each onboarding step, overall progress percentage,
+        and relevant timestamps.
+      operationId: getOnboardingStatus
+      responses:
+        '200':
+          description: Onboarding status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardingStatusResponse'
+              example:
+                id: "tcrn:onboarding:aabbccdd-1122-3344-5566-778899aabbcc"
+                companyId: "tcrn:company:11111111-1111-1111-1111-111111111111"
+                status: "IN_PROGRESS"
+                completionPercentage: 66
+                steps:
+                  profileComplete: true
+                  documentsVerified: true
+                  firstVehicleListed: false
+                timestamps:
+                  profileCompletedAt: "2024-01-10T10:00:00Z"
+                  documentsVerifiedAt: "2024-01-12T14:00:00Z"
+                  firstVehicleListedAt: null
+                  onboardingStartedAt: "2024-01-10T09:00:00Z"
+                  onboardingCompletedAt: null
+                fullyOnboarded: false
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /onboarding/step/{step}:
+    post:
+      tags:
+        - Onboarding
+      summary: Complete onboarding step
+      description: |
+        Completes an onboarding step for the authenticated company.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with COMPANY role.
+
+        **Available steps:**
+        - `PROFILE_COMPLETE` - Company profile has been fully completed
+        - `DOCUMENTS_VERIFIED` - Company documents have been verified
+        - `FIRST_VEHICLE_LISTED` - First vehicle has been listed for rental
+      operationId: completeOnboardingStep
+      parameters:
+        - name: step
+          in: path
+          required: true
+          description: The onboarding step to complete
+          schema:
+            type: string
+            enum:
+              - PROFILE_COMPLETE
+              - DOCUMENTS_VERIFIED
+              - FIRST_VEHICLE_LISTED
+          example: "PROFILE_COMPLETE"
+      responses:
+        '200':
+          description: Onboarding step completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompleteStepResponse'
+              example:
+                onboarding:
+                  id: "tcrn:onboarding:aabbccdd-1122-3344-5566-778899aabbcc"
+                  companyId: "tcrn:company:11111111-1111-1111-1111-111111111111"
+                  status: "IN_PROGRESS"
+                  completionPercentage: 33
+                  steps:
+                    profileComplete: true
+                    documentsVerified: false
+                    firstVehicleListed: false
+                  timestamps:
+                    profileCompletedAt: "2024-01-15T10:00:00Z"
+                    documentsVerifiedAt: null
+                    firstVehicleListedAt: null
+                    onboardingStartedAt: "2024-01-10T09:00:00Z"
+                    onboardingCompletedAt: null
+                  fullyOnboarded: false
+                message: "Step completed successfully"
+
+        '400':
+          description: Bad request - invalid step or step already completed
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  # ==================== USER PROFILE ====================
+  /users/{userId}/profile:
+    put:
+      tags:
+        - User Profile
+      summary: Update user profile
+      description: |
+        Updates the profile of a company user.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with COMPANY role.
+
+        Users can only update their own profile (userId must match the authenticated user).
+      operationId: updateCompanyUserProfile
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The user identifier (must match the authenticated user)
+          schema:
+            type: string
+          example: "auth0|507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+            example:
+              name: "Jan Kowalski"
+              email: "jan.kowalski@rentacar.pl"
+              phone: "+48123456789"
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+              example:
+                message: "Profile updated successfully"
+                userId: "auth0|507f1f77bcf86cd799439011"
+                name: "Jan Kowalski"
+                email: "jan.kowalski@rentacar.pl"
+
+        '400':
+          description: Bad request - validation error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                status: 400
+                error: "Bad Request"
+                errorCode: "VALIDATION_ERROR"
+                message: "Invalid email format"
+                timestamp: "2024-01-15T12:00:00Z"
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '403':
+          description: Forbidden - cannot update another user's profile
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
 components:
   # Company-specific response schemas
   schemas:
@@ -2904,6 +4227,1041 @@ components:
           example: "2024-12-27T10:00:00Z"
         status:
           $ref: '../shared/schemas/enums.yaml#/ReservationStatus'
+
+    # ==================== Analytics Schemas ====================
+    AnalyticsSummaryResponse:
+      type: object
+      required:
+        - revenue
+        - vehicles
+        - monthly
+        - revenueTimeSeries
+        - reservationTimeSeries
+        - vehicleTypeDistribution
+        - availabilityHeatmap
+        - calculatedAt
+        - currency
+      properties:
+        revenue:
+          $ref: '#/components/schemas/RevenueMetrics'
+        vehicles:
+          $ref: '#/components/schemas/VehicleMetrics'
+        monthly:
+          $ref: '#/components/schemas/MonthlyMetrics'
+        revenueTimeSeries:
+          type: array
+          items:
+            $ref: '#/components/schemas/RevenueDataPoint'
+          description: Time-series data for revenue charts
+        reservationTimeSeries:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservationDataPoint'
+          description: Time-series data for reservation count charts
+        vehicleTypeDistribution:
+          type: array
+          items:
+            $ref: '#/components/schemas/VehicleTypeDistribution'
+          description: Vehicle type distribution for pie charts
+        availabilityHeatmap:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailabilityHeatmapCell'
+          description: Availability heatmap data
+        calculatedAt:
+          type: string
+          format: date-time
+          description: When the analytics were calculated (ISO 8601)
+          example: "2024-01-31T12:00:00Z"
+        currency:
+          type: string
+          description: ISO 4217 currency code
+          pattern: '^[A-Z]{3}$'
+          example: "PLN"
+
+    RevenueMetrics:
+      type: object
+      properties:
+        totalBrutto:
+          type: integer
+          format: int64
+          description: Total gross revenue in smallest currency unit
+          example: 5250000
+        dailyTierRevenue:
+          type: integer
+          format: int64
+          description: Revenue from daily-tier rentals in smallest currency unit
+          example: 1500000
+        weeklyTierRevenue:
+          type: integer
+          format: int64
+          description: Revenue from weekly-tier rentals in smallest currency unit
+          example: 2000000
+        monthlyTierRevenue:
+          type: integer
+          format: int64
+          description: Revenue from monthly-tier rentals in smallest currency unit
+          example: 1750000
+        forecastedRevenue:
+          type: integer
+          format: int64
+          description: Forecasted revenue in smallest currency unit
+          example: 6000000
+        growthPercentage:
+          type: number
+          format: double
+          description: Revenue growth percentage compared to previous period
+          example: 12.5
+
+    VehicleMetrics:
+      type: object
+      properties:
+        topVehicles:
+          type: array
+          items:
+            $ref: '#/components/schemas/VehiclePerformance'
+          description: Top 10 performing vehicles
+          maxItems: 10
+        utilizationRate:
+          type: number
+          format: double
+          description: Overall fleet utilization rate as percentage
+          example: 72.3
+        averageRevenuePerVehicle:
+          type: integer
+          format: int64
+          description: Average revenue per vehicle in smallest currency unit
+          example: 116667
+        averageDailyRate:
+          type: integer
+          format: int64
+          description: Average daily rental rate in smallest currency unit
+          example: 20000
+        totalVehicles:
+          type: integer
+          format: int32
+          description: Total number of vehicles in fleet
+          example: 45
+        vehiclesRented:
+          type: integer
+          format: int32
+          description: Number of vehicles currently rented
+          example: 32
+
+    VehiclePerformance:
+      type: object
+      properties:
+        vehicleId:
+          type: string
+          description: Vehicle identifier
+          example: "tcrn:vehicle:aabbccdd-1122-3344-5566-778899aabbcc"
+        vehicleName:
+          type: string
+          description: Vehicle make and model with year
+          example: "Toyota RAV4 2023"
+        licensePlate:
+          type: string
+          description: Vehicle license plate number
+          example: "WA 12345"
+        totalRevenue:
+          type: integer
+          format: int64
+          description: Total revenue from this vehicle in smallest currency unit
+          example: 350000
+        reservationCount:
+          type: integer
+          format: int32
+          description: Number of reservations for this vehicle
+          example: 15
+        utilizationRate:
+          type: number
+          format: double
+          description: Vehicle utilization rate as percentage
+          example: 85.5
+        averageDailyRate:
+          type: integer
+          format: int64
+          description: Average daily rate for this vehicle in smallest currency unit
+          example: 25000
+        rank:
+          type: integer
+          format: int32
+          description: Performance rank (1 = best performing)
+          example: 1
+
+    MonthlyMetrics:
+      type: object
+      properties:
+        momGrowthPercentage:
+          type: number
+          format: double
+          description: Month-over-month growth percentage
+          example: 8.5
+        seasonalityIndex:
+          type: object
+          additionalProperties:
+            type: number
+            format: double
+          description: Seasonality index by month (1.0 = average)
+          example:
+            JANUARY: 0.85
+            JULY: 1.45
+        conversionRate:
+          type: number
+          format: double
+          description: Booking conversion rate as percentage
+          example: 65.0
+        cancellationRate:
+          type: number
+          format: double
+          description: Cancellation rate as percentage
+          example: 12.0
+        noShowRate:
+          type: number
+          format: double
+          description: No-show rate as percentage
+          example: 3.0
+        totalReservations:
+          type: integer
+          format: int32
+          description: Total number of reservations
+          example: 120
+        confirmedReservations:
+          type: integer
+          format: int32
+          description: Number of confirmed reservations
+          example: 78
+        cancelledReservations:
+          type: integer
+          format: int32
+          description: Number of cancelled reservations
+          example: 14
+        noShowReservations:
+          type: integer
+          format: int32
+          description: Number of no-show reservations
+          example: 4
+
+    RevenueDataPoint:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          description: Date of the data point
+          example: "2024-01-01"
+        revenue:
+          type: integer
+          format: int64
+          description: Revenue for this date in smallest currency unit
+          example: 175000
+        label:
+          type: string
+          description: Human-readable label for the data point
+          example: "Jan 1"
+
+    ReservationDataPoint:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          description: Date of the data point
+          example: "2024-01-01"
+        count:
+          type: integer
+          format: int32
+          description: Number of reservations for this date
+          example: 5
+        label:
+          type: string
+          description: Human-readable label for the data point
+          example: "Jan 1"
+
+    VehicleTypeDistribution:
+      type: object
+      properties:
+        vehicleType:
+          type: string
+          description: Vehicle type name
+          example: "SUV"
+        count:
+          type: integer
+          format: int32
+          description: Number of vehicles of this type
+          example: 15
+        revenue:
+          type: integer
+          format: int64
+          description: Total revenue from this vehicle type in smallest currency unit
+          example: 2100000
+        percentage:
+          type: number
+          format: double
+          description: Percentage of fleet this type represents
+          example: 40.0
+
+    AvailabilityHeatmapCell:
+      type: object
+      properties:
+        dayOfWeek:
+          type: string
+          enum:
+            - MONDAY
+            - TUESDAY
+            - WEDNESDAY
+            - THURSDAY
+            - FRIDAY
+            - SATURDAY
+            - SUNDAY
+          description: Day of the week
+          example: "MONDAY"
+        hour:
+          type: integer
+          format: int32
+          description: Hour of the day (0-23)
+          minimum: 0
+          maximum: 23
+          example: 10
+        availableCount:
+          type: integer
+          format: int32
+          description: Number of available vehicles
+          example: 30
+        rentedCount:
+          type: integer
+          format: int32
+          description: Number of rented vehicles
+          example: 15
+        utilizationRate:
+          type: number
+          format: double
+          description: Utilization rate as percentage
+          example: 33.3
+
+    # ==================== Vehicle Quality Schemas ====================
+    SubmitVehicleForReviewResponse:
+      type: object
+      required:
+        - qualityStatus
+        - message
+      properties:
+        qualityStatus:
+          $ref: '#/components/schemas/VehicleQualityStatus'
+        message:
+          type: string
+          description: Success message
+          example: "Vehicle successfully submitted for quality review"
+
+    VehicleQualityStatus:
+      type: object
+      required:
+        - vehicleId
+        - listingStatus
+      properties:
+        vehicleId:
+          type: string
+          description: Vehicle identifier
+          example: "tcrn:vehicle:3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        listingStatus:
+          type: string
+          description: Current listing status in the review workflow
+          enum:
+            - DRAFT
+            - PENDING_REVIEW
+            - APPROVED
+            - REJECTED
+            - SUSPENDED
+          example: "APPROVED"
+        statusDescription:
+          type: string
+          description: Human-readable description of the current status
+          example: "Vehicle is approved and visible to customers"
+        submittedForReviewAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the vehicle was submitted for review (ISO 8601)
+          example: "2024-01-10T10:00:00Z"
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the vehicle was last reviewed (ISO 8601)
+          example: "2024-01-11T14:30:00Z"
+        reviewedBy:
+          type: string
+          nullable: true
+          description: ID of the user who performed the review
+          example: "admin-user-123"
+        rejectionReason:
+          type: string
+          nullable: true
+          description: Reason for rejection (if listingStatus is REJECTED or SUSPENDED)
+          example: null
+        photoQualityScore:
+          type: integer
+          format: int32
+          nullable: true
+          description: Photo quality score (0-100)
+          minimum: 0
+          maximum: 100
+          example: 90
+        listingCompletenessScore:
+          type: integer
+          format: int32
+          nullable: true
+          description: Listing completeness score (0-100)
+          minimum: 0
+          maximum: 100
+          example: 95
+        overallQualityScore:
+          type: integer
+          format: int32
+          nullable: true
+          description: Overall quality score (0-100)
+          minimum: 0
+          maximum: 100
+          example: 92
+        customerRating:
+          type: number
+          format: double
+          nullable: true
+          description: Customer rating as decimal (1.0 to 5.0)
+          example: 4.5
+        customerReviewCount:
+          type: integer
+          format: int32
+          nullable: true
+          description: Number of customer reviews for this vehicle
+          example: 12
+        canSubmitForReview:
+          type: boolean
+          nullable: true
+          description: Whether the vehicle can be submitted for review
+          example: false
+
+    VehicleValidationResult:
+      type: object
+      required:
+        - vehicleId
+        - isValid
+        - completenessScore
+        - errors
+      properties:
+        vehicleId:
+          type: string
+          description: Vehicle identifier
+          example: "tcrn:vehicle:3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        isValid:
+          type: boolean
+          description: Whether the vehicle is ready for submission
+          example: false
+        completenessScore:
+          type: integer
+          format: int32
+          description: Listing completeness score (0-100)
+          minimum: 0
+          maximum: 100
+          example: 75
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          description: List of validation errors (empty if valid)
+        message:
+          type: string
+          description: Human-readable summary message
+          example: "Vehicle has 2 validation errors and cannot be submitted"
+
+    ValidationError:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+          description: The field that failed validation
+          example: "photos"
+        message:
+          type: string
+          description: The error message
+          example: "At least 3 photos are required"
+
+    CompanyQualityMetrics:
+      type: object
+      required:
+        - companyId
+        - qualityScore
+        - tier
+      properties:
+        companyId:
+          type: string
+          description: Company identifier
+          example: "tcrn:company:11111111-1111-1111-1111-111111111111"
+        qualityScore:
+          type: integer
+          format: int32
+          description: Calculated quality score (0-100)
+          minimum: 0
+          maximum: 100
+          example: 78
+        tier:
+          type: string
+          description: Quality tier classification
+          enum:
+            - BRONZE
+            - SILVER
+            - GOLD
+            - PLATINUM
+          example: "GOLD"
+        tierDescription:
+          type: string
+          description: Human-readable description of the tier
+          example: "Premium tier (score 70-84)"
+        pointsToNextTier:
+          type: integer
+          format: int32
+          description: Points needed to reach the next tier
+          example: 7
+        avgResponseTimeHours:
+          type: number
+          format: double
+          description: Average response time to booking requests in hours
+          example: 2.5
+        acceptanceRate:
+          type: number
+          format: double
+          description: Booking acceptance rate (0.0 to 1.0)
+          example: 0.92
+        avgCustomerRating:
+          type: number
+          format: double
+          description: Average customer rating (1.0 to 5.0)
+          example: 4.3
+        totalReviews:
+          type: integer
+          format: int32
+          description: Total number of customer reviews
+          example: 87
+        totalBookings:
+          type: integer
+          format: int32
+          description: Total number of bookings
+          example: 245
+        completedBookings:
+          type: integer
+          format: int32
+          description: Number of successfully completed bookings
+          example: 230
+        completionRate:
+          type: number
+          format: double
+          description: Completion rate as percentage
+          example: 93.9
+        cancelledByPartner:
+          type: integer
+          format: int32
+          description: Number of bookings cancelled by the partner
+          example: 5
+        totalDisputes:
+          type: integer
+          format: int32
+          description: Total number of disputes
+          example: 3
+        disputesLostByPartner:
+          type: integer
+          format: int32
+          description: Number of disputes lost by the partner
+          example: 1
+        lastCalculatedAt:
+          type: string
+          format: date-time
+          description: When the metrics were last calculated (ISO 8601)
+          example: "2024-01-15T10:00:00Z"
+
+    # ==================== Support Ticket Schemas ====================
+    CreateSupportTicketRequest:
+      type: object
+      required:
+        - subject
+        - description
+        - category
+      properties:
+        subject:
+          type: string
+          maxLength: 255
+          description: Ticket subject
+          example: "Unable to upload vehicle photos"
+        description:
+          type: string
+          description: Detailed description of the issue
+          example: "When trying to upload photos for my Toyota RAV4, I get an error message."
+        category:
+          type: string
+          description: Ticket category
+          enum:
+            - account
+            - billing
+            - reservation
+            - vehicle
+            - technical
+            - other
+          example: "technical"
+        priority:
+          type: string
+          nullable: true
+          description: Ticket priority (defaults to MEDIUM if not specified)
+          enum:
+            - low
+            - medium
+            - high
+            - critical
+          example: "medium"
+
+    SupportTicket:
+      type: object
+      required:
+        - id
+        - companyId
+        - subject
+        - category
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: Unique ticket identifier
+          example: "tcrn:ticket:aabbccdd-1122-3344-5566-778899aabbcc"
+        companyId:
+          type: string
+          description: Company that created the ticket
+          example: "tcrn:company:11111111-1111-1111-1111-111111111111"
+        createdById:
+          type: string
+          nullable: true
+          description: User who created the ticket
+          example: "user-123"
+        subject:
+          type: string
+          description: Ticket subject
+          example: "Unable to upload vehicle photos"
+        description:
+          type: string
+          description: Detailed description of the issue
+          example: "When trying to upload photos..."
+        category:
+          type: string
+          description: Ticket category
+          enum:
+            - account
+            - billing
+            - reservation
+            - vehicle
+            - technical
+            - other
+          example: "technical"
+        priority:
+          type: string
+          description: Ticket priority
+          enum:
+            - low
+            - medium
+            - high
+            - critical
+          example: "medium"
+        status:
+          type: string
+          description: Current ticket status
+          enum:
+            - open
+            - in_progress
+            - waiting_customer
+            - resolved
+            - closed
+          example: "open"
+        assignedTo:
+          type: string
+          nullable: true
+          description: Support agent assigned to the ticket
+          example: null
+        firstResponseAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the first response was sent (ISO 8601)
+          example: null
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the ticket was resolved (ISO 8601)
+          example: null
+        slaResponseDue:
+          type: string
+          format: date-time
+          nullable: true
+          description: SLA deadline for first response (ISO 8601)
+          example: "2024-01-15T20:00:00Z"
+        slaResolutionDue:
+          type: string
+          format: date-time
+          nullable: true
+          description: SLA deadline for resolution (ISO 8601)
+          example: "2024-01-17T12:00:00Z"
+        slaResponseBreached:
+          type: boolean
+          nullable: true
+          description: Whether the SLA response deadline was breached
+          example: false
+        slaResolutionBreached:
+          type: boolean
+          nullable: true
+          description: Whether the SLA resolution deadline was breached
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          description: When the ticket was created (ISO 8601)
+          example: "2024-01-15T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the ticket was last updated (ISO 8601)
+          example: "2024-01-15T12:00:00Z"
+        messageCount:
+          type: integer
+          format: int64
+          nullable: true
+          description: Total number of messages in the ticket
+          example: 2
+
+    SupportTicketListResponse:
+      type: object
+      required:
+        - tickets
+        - page
+        - size
+        - totalElements
+        - totalPages
+      properties:
+        tickets:
+          type: array
+          items:
+            $ref: '#/components/schemas/SupportTicket'
+          description: List of support tickets
+        page:
+          type: integer
+          format: int32
+          description: Current page number (0-indexed)
+          minimum: 0
+          example: 0
+        size:
+          type: integer
+          format: int32
+          description: Number of items per page
+          example: 20
+        totalElements:
+          type: integer
+          format: int64
+          description: Total number of tickets across all pages
+          example: 15
+        totalPages:
+          type: integer
+          format: int32
+          description: Total number of pages
+          example: 1
+
+    SupportTicketDetailResponse:
+      type: object
+      required:
+        - ticket
+        - messages
+      properties:
+        ticket:
+          $ref: '#/components/schemas/SupportTicket'
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketMessage'
+          description: List of messages in the ticket
+
+    AddTicketMessageRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: The message content
+          example: "I've tried with smaller files and still getting the same error."
+        isInternal:
+          type: boolean
+          nullable: true
+          description: Whether this is an internal-only message (not visible to customer)
+          default: false
+          example: false
+
+    TicketMessage:
+      type: object
+      required:
+        - id
+        - ticketId
+        - message
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Unique message identifier
+          example: "tcrn:message:11223344-5566-7788-99aa-bbccddeeff00"
+        ticketId:
+          type: string
+          description: The ticket this message belongs to
+          example: "tcrn:ticket:aabbccdd-1122-3344-5566-778899aabbcc"
+        authorType:
+          type: string
+          nullable: true
+          description: Type of the message author
+          example: "SUPPORT"
+        authorId:
+          type: string
+          nullable: true
+          description: Identifier of the message author
+          example: "support-agent-456"
+        authorName:
+          type: string
+          nullable: true
+          description: Display name of the message author
+          example: "Support Team"
+        message:
+          type: string
+          description: The message content
+          example: "Thank you for reaching out. We are investigating the issue."
+        isInternal:
+          type: boolean
+          nullable: true
+          description: Whether this is an internal-only message
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          description: When the message was created (ISO 8601)
+          example: "2024-01-15T14:00:00Z"
+
+    TicketStatusCounts:
+      type: object
+      required:
+        - open
+        - inProgress
+        - waitingCustomer
+        - resolved
+        - closed
+        - total
+        - active
+      properties:
+        open:
+          type: integer
+          format: int64
+          description: Number of open tickets
+          minimum: 0
+          example: 3
+        inProgress:
+          type: integer
+          format: int64
+          description: Number of in-progress tickets
+          minimum: 0
+          example: 2
+        waitingCustomer:
+          type: integer
+          format: int64
+          description: Number of tickets waiting for customer response
+          minimum: 0
+          example: 1
+        resolved:
+          type: integer
+          format: int64
+          description: Number of resolved tickets
+          minimum: 0
+          example: 5
+        closed:
+          type: integer
+          format: int64
+          description: Number of closed tickets
+          minimum: 0
+          example: 12
+        total:
+          type: integer
+          format: int64
+          description: Total number of tickets
+          minimum: 0
+          example: 23
+        active:
+          type: integer
+          format: int64
+          description: Number of active tickets (open + in_progress + waiting_customer)
+          minimum: 0
+          example: 6
+
+    # ==================== Onboarding Schemas ====================
+    OnboardingStatusResponse:
+      type: object
+      required:
+        - status
+        - completionPercentage
+        - steps
+        - fullyOnboarded
+      properties:
+        id:
+          type: string
+          nullable: true
+          description: Onboarding record identifier
+          example: "tcrn:onboarding:aabbccdd-1122-3344-5566-778899aabbcc"
+        companyId:
+          type: string
+          nullable: true
+          description: Company identifier
+          example: "tcrn:company:11111111-1111-1111-1111-111111111111"
+        status:
+          type: string
+          description: Overall onboarding status
+          enum:
+            - NOT_STARTED
+            - IN_PROGRESS
+            - COMPLETED
+            - STALLED
+          example: "IN_PROGRESS"
+        completionPercentage:
+          type: integer
+          format: int32
+          description: Overall completion percentage (0-100)
+          minimum: 0
+          maximum: 100
+          example: 66
+        steps:
+          $ref: '#/components/schemas/OnboardingSteps'
+        timestamps:
+          $ref: '#/components/schemas/OnboardingTimestamps'
+        fullyOnboarded:
+          type: boolean
+          description: Whether all onboarding steps are completed
+          example: false
+
+    OnboardingSteps:
+      type: object
+      required:
+        - profileComplete
+        - documentsVerified
+        - firstVehicleListed
+      properties:
+        profileComplete:
+          type: boolean
+          description: Whether the company profile has been fully completed
+          example: true
+        documentsVerified:
+          type: boolean
+          description: Whether company documents have been verified
+          example: true
+        firstVehicleListed:
+          type: boolean
+          description: Whether the first vehicle has been listed
+          example: false
+
+    OnboardingTimestamps:
+      type: object
+      properties:
+        profileCompletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the profile was completed (ISO 8601)
+          example: "2024-01-10T10:00:00Z"
+        documentsVerifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When documents were verified (ISO 8601)
+          example: "2024-01-12T14:00:00Z"
+        firstVehicleListedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the first vehicle was listed (ISO 8601)
+          example: null
+        onboardingStartedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When onboarding was started (ISO 8601)
+          example: "2024-01-10T09:00:00Z"
+        onboardingCompletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When onboarding was completed (ISO 8601)
+          example: null
+
+    CompleteStepResponse:
+      type: object
+      required:
+        - onboarding
+        - message
+      properties:
+        onboarding:
+          $ref: '#/components/schemas/OnboardingStatusResponse'
+        message:
+          type: string
+          description: Success message
+          example: "Step completed successfully"
+
+    # ==================== User Profile Schemas ====================
+    UpdateProfileRequest:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          description: User's display name
+          example: "Jan Kowalski"
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: User's email address
+          example: "jan.kowalski@rentacar.pl"
+        phone:
+          type: string
+          maxLength: 20
+          nullable: true
+          description: User's phone number
+          example: "+48123456789"
+
+    ProfileResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Result message
+          example: "Profile updated successfully"
+        userId:
+          type: string
+          nullable: true
+          description: User identifier
+          example: "auth0|507f1f77bcf86cd799439011"
+        name:
+          type: string
+          nullable: true
+          description: User's display name
+          example: "Jan Kowalski"
+        email:
+          type: string
+          nullable: true
+          description: User's email address
+          example: "jan.kowalski@rentacar.pl"
 
   securitySchemes:
     bearerAuth:

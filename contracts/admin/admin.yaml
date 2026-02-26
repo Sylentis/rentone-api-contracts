@@ -1,0 +1,1007 @@
+openapi: 3.0.3
+info:
+  title: RNT-ALPH Admin API
+  description: |
+    Admin API for platform administration.
+    Provides endpoints for managing companies, commission billing, and viewing platform-wide statistics.
+
+    **Authentication**: All endpoints require a valid JWT bearer token with ADMIN role.
+  version: 1.0.0
+  contact:
+    name: RNT-ALPH Team
+
+servers:
+  - url: http://localhost:9847/api/v1/admin
+    description: Local development server
+  - url: https://api.rnt-alph.com/v1/admin
+    description: Production server
+
+tags:
+  - name: Commission Reports
+    description: Commission report generation and export
+  - name: Company Billing
+    description: Company commission configuration and billing management
+  - name: Dashboard
+    description: Admin dashboard overview statistics
+
+paths:
+  # ==================== COMMISSION REPORTS ====================
+  /reports/commissions:
+    get:
+      tags:
+        - Commission Reports
+      summary: Get commission report
+      description: |
+        Gets commission report for a specific company or all companies within a date range.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with ADMIN role.
+
+        Returns detailed commission records and summary statistics for the specified period.
+      operationId: getCommissionReport
+      parameters:
+        - name: companyId
+          in: query
+          required: false
+          description: Optional company ID to filter the report by a specific company
+          schema:
+            type: string
+          example: "tcrn:company:11111111-1111-1111-1111-111111111111"
+        - name: periodStart
+          in: query
+          required: true
+          description: Start date of the report period (ISO 8601 date format)
+          schema:
+            type: string
+            format: date
+          example: "2024-01-01"
+        - name: periodEnd
+          in: query
+          required: true
+          description: End date of the report period (ISO 8601 date format)
+          schema:
+            type: string
+            format: date
+          example: "2024-01-31"
+      responses:
+        '200':
+          description: Commission report retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommissionReportResponse'
+              example:
+                companyId: "tcrn:company:11111111-1111-1111-1111-111111111111"
+                companyName: "Rent-A-Car Poland"
+                nip: "1234567890"
+                periodStart: "2024-01-01"
+                periodEnd: "2024-01-31"
+                records:
+                  - id: "tcrn:commission:aabbccdd-1122-3344-5566-778899aabbcc"
+                    reservationId: "tcrn:reservation:aabbccdd-1122-3344-5566-778899aabbcc"
+                    confirmationCode: "ABC12345"
+                    vehicleInfo: "Toyota RAV4 2023"
+                    pickupDate: "2024-01-10T10:00:00Z"
+                    returnDate: "2024-01-17T10:00:00Z"
+                    reservationTotalPrice: 350000
+                    commissionRatePercent: 10.00
+                    commissionAmount: 35000
+                    currency: "PLN"
+                    status: "PENDING"
+                    calculatedAt: "2024-01-17T12:00:00Z"
+                summary:
+                  reservationCount: 15
+                  totalReservationRevenue: 5250000
+                  totalCommission: 525000
+                  currency: "PLN"
+
+        '400':
+          description: Bad request - invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                status: 400
+                error: "Bad Request"
+                errorCode: "VALIDATION_ERROR"
+                message: "periodStart is required"
+                timestamp: "2024-01-15T12:00:00Z"
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '403':
+          description: Forbidden - insufficient permissions (ADMIN role required)
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /reports/commissions/summary:
+    get:
+      tags:
+        - Commission Reports
+      summary: Get all companies commission summary
+      description: |
+        Gets commission summary for all companies in the specified period.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with ADMIN role.
+
+        Returns a list of per-company commission summaries including reservation counts
+        and total commission amounts.
+      operationId: getAllCompaniesSummary
+      parameters:
+        - name: periodStart
+          in: query
+          required: true
+          description: Start date of the report period (ISO 8601 date format)
+          schema:
+            type: string
+            format: date
+          example: "2024-01-01"
+        - name: periodEnd
+          in: query
+          required: true
+          description: End date of the report period (ISO 8601 date format)
+          schema:
+            type: string
+            format: date
+          example: "2024-01-31"
+      responses:
+        '200':
+          description: Commission summaries retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CommissionSummaryResponse'
+              example:
+                - reservationCount: 15
+                  totalReservationRevenue: 5250000
+                  totalCommission: 525000
+                  currency: "PLN"
+                - reservationCount: 8
+                  totalReservationRevenue: 2400000
+                  totalCommission: 240000
+                  currency: "PLN"
+
+        '400':
+          description: Bad request - invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '403':
+          description: Forbidden - insufficient permissions (ADMIN role required)
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /reports/commissions/export:
+    get:
+      tags:
+        - Commission Reports
+      summary: Export commission report
+      description: |
+        Exports commission report in the specified format (CSV, XLSX, or PDF).
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with ADMIN role.
+
+        The response is a binary file download with appropriate content type and
+        Content-Disposition header for the requested format.
+      operationId: exportCommissionReport
+      parameters:
+        - name: format
+          in: query
+          required: true
+          description: Export file format
+          schema:
+            type: string
+            enum:
+              - csv
+              - xlsx
+              - pdf
+          example: "csv"
+        - name: companyId
+          in: query
+          required: false
+          description: Optional company ID to filter the report by a specific company
+          schema:
+            type: string
+          example: "tcrn:company:11111111-1111-1111-1111-111111111111"
+        - name: periodStart
+          in: query
+          required: true
+          description: Start date of the report period (ISO 8601 date format)
+          schema:
+            type: string
+            format: date
+          example: "2024-01-01"
+        - name: periodEnd
+          in: query
+          required: true
+          description: End date of the report period (ISO 8601 date format)
+          schema:
+            type: string
+            format: date
+          example: "2024-01-31"
+      responses:
+        '200':
+          description: Commission report exported successfully
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              description: Attachment filename for the exported report
+              schema:
+                type: string
+              example: 'attachment; filename="commission-report_2024-01-01_2024-01-31.csv"'
+
+        '400':
+          description: Bad request - invalid parameters or unsupported export format
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                status: 400
+                error: "Bad Request"
+                errorCode: "VALIDATION_ERROR"
+                message: "Unsupported export format: xml. Allowed: [csv, xlsx, pdf]"
+                timestamp: "2024-01-15T12:00:00Z"
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '403':
+          description: Forbidden - insufficient permissions (ADMIN role required)
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  # ==================== COMPANY BILLING ====================
+  /companies:
+    get:
+      tags:
+        - Company Billing
+      summary: List companies with commission details
+      description: |
+        Lists all companies with their commission configuration and current month summary.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with ADMIN role.
+
+        Returns each company with its active commission rate, minimum commission,
+        and a summary of commissions for the current month.
+      operationId: listCompaniesWithCommission
+      responses:
+        '200':
+          description: Companies listed successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CompanyWithCommissionResponse'
+              example:
+                - id: "tcrn:company:11111111-1111-1111-1111-111111111111"
+                  name: "Rent-A-Car Poland"
+                  nip: "1234567890"
+                  commissionConfig:
+                    id: "tcrn:commission-config:aabbccdd-1122-3344-5566-778899aabbcc"
+                    companyId: "tcrn:company:11111111-1111-1111-1111-111111111111"
+                    commissionRatePercent: 10.00
+                    minimumCommission: 5000
+                    effectiveFrom: "2024-01-01T00:00:00Z"
+                    effectiveTo: null
+                  currentMonthSummary:
+                    reservationCount: 15
+                    totalReservationRevenue: 5250000
+                    totalCommission: 525000
+                    currency: "PLN"
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '403':
+          description: Forbidden - insufficient permissions (ADMIN role required)
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /companies/{companyId}:
+    get:
+      tags:
+        - Company Billing
+      summary: Get company with commission details
+      description: |
+        Gets a specific company with its commission configuration and current month summary.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with ADMIN role.
+      operationId: getCompanyWithCommission
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          description: The company identifier
+          schema:
+            type: string
+          example: "tcrn:company:11111111-1111-1111-1111-111111111111"
+      responses:
+        '200':
+          description: Company details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyWithCommissionResponse'
+              example:
+                id: "tcrn:company:11111111-1111-1111-1111-111111111111"
+                name: "Rent-A-Car Poland"
+                nip: "1234567890"
+                commissionConfig:
+                  id: "tcrn:commission-config:aabbccdd-1122-3344-5566-778899aabbcc"
+                  companyId: "tcrn:company:11111111-1111-1111-1111-111111111111"
+                  commissionRatePercent: 10.00
+                  minimumCommission: 5000
+                  effectiveFrom: "2024-01-01T00:00:00Z"
+                  effectiveTo: null
+                currentMonthSummary:
+                  reservationCount: 15
+                  totalReservationRevenue: 5250000
+                  totalCommission: 525000
+                  currency: "PLN"
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '403':
+          description: Forbidden - insufficient permissions (ADMIN role required)
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '404':
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                status: 404
+                error: "Not Found"
+                errorCode: "NOT_FOUND"
+                message: "Company not found"
+                timestamp: "2024-01-15T12:00:00Z"
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /companies/{companyId}/commission-config:
+    get:
+      tags:
+        - Company Billing
+      summary: Get commission configuration
+      description: |
+        Gets the current effective commission configuration for a company.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with ADMIN role.
+
+        Returns the active commission rate and minimum commission amount.
+      operationId: getCommissionConfig
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          description: The company identifier
+          schema:
+            type: string
+          example: "tcrn:company:11111111-1111-1111-1111-111111111111"
+      responses:
+        '200':
+          description: Commission configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommissionConfigResponse'
+              example:
+                id: "tcrn:commission-config:aabbccdd-1122-3344-5566-778899aabbcc"
+                companyId: "tcrn:company:11111111-1111-1111-1111-111111111111"
+                commissionRatePercent: 10.00
+                minimumCommission: 5000
+                effectiveFrom: "2024-01-01T00:00:00Z"
+                effectiveTo: null
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '403':
+          description: Forbidden - insufficient permissions (ADMIN role required)
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '404':
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+    put:
+      tags:
+        - Company Billing
+      summary: Update commission configuration
+      description: |
+        Updates the commission configuration for a company.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with ADMIN role.
+
+        Sets a new commission rate and minimum commission amount.
+      operationId: updateCommissionConfig
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          description: The company identifier
+          schema:
+            type: string
+          example: "tcrn:company:11111111-1111-1111-1111-111111111111"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommissionConfigRequest'
+            example:
+              commissionRatePercent: 12.50
+              minimumCommission: 7500
+      responses:
+        '200':
+          description: Commission configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommissionConfigResponse'
+              example:
+                id: "tcrn:commission-config:aabbccdd-1122-3344-5566-778899aabbcc"
+                companyId: "tcrn:company:11111111-1111-1111-1111-111111111111"
+                commissionRatePercent: 12.50
+                minimumCommission: 7500
+                effectiveFrom: "2024-02-01T00:00:00Z"
+                effectiveTo: null
+
+        '400':
+          description: Bad request - invalid configuration values
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+              example:
+                status: 400
+                error: "Bad Request"
+                errorCode: "VALIDATION_ERROR"
+                message: "Commission rate percent must be positive"
+                timestamp: "2024-01-15T12:00:00Z"
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '403':
+          description: Forbidden - insufficient permissions (ADMIN role required)
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '404':
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  /companies/{companyId}/commissions:
+    get:
+      tags:
+        - Company Billing
+      summary: Get company commission records
+      description: |
+        Gets commission records for a specific company within an optional date range.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with ADMIN role.
+
+        If no date range is provided, all commission records for the company are returned.
+      operationId: getCompanyCommissions
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          description: The company identifier
+          schema:
+            type: string
+          example: "tcrn:company:11111111-1111-1111-1111-111111111111"
+        - name: periodStart
+          in: query
+          required: false
+          description: Optional start date filter (ISO 8601 date format)
+          schema:
+            type: string
+            format: date
+          example: "2024-01-01"
+        - name: periodEnd
+          in: query
+          required: false
+          description: Optional end date filter (ISO 8601 date format)
+          schema:
+            type: string
+            format: date
+          example: "2024-01-31"
+      responses:
+        '200':
+          description: Commission records retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CommissionRecordResponse'
+              example:
+                - id: "tcrn:commission:aabbccdd-1122-3344-5566-778899aabbcc"
+                  reservationId: "tcrn:reservation:aabbccdd-1122-3344-5566-778899aabbcc"
+                  confirmationCode: "ABC12345"
+                  vehicleInfo: "Toyota RAV4 2023"
+                  pickupDate: "2024-01-10T10:00:00Z"
+                  returnDate: "2024-01-17T10:00:00Z"
+                  reservationTotalPrice: 350000
+                  commissionRatePercent: 10.00
+                  commissionAmount: 35000
+                  currency: "PLN"
+                  status: "PENDING"
+                  calculatedAt: "2024-01-17T12:00:00Z"
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '403':
+          description: Forbidden - insufficient permissions (ADMIN role required)
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '404':
+          description: Company not found
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  # ==================== DASHBOARD ====================
+  /stats/overview:
+    get:
+      tags:
+        - Dashboard
+      summary: Get dashboard overview statistics
+      description: |
+        Returns aggregated dashboard metrics for the admin panel.
+
+        **Authentication required**: This endpoint requires a valid JWT bearer token with ADMIN role.
+
+        **Metrics included:**
+        - Total number of companies on the platform
+        - Total pending commissions amount
+        - This month's platform revenue
+      operationId: getDashboardOverview
+      responses:
+        '200':
+          description: Dashboard overview retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardOverviewResponse'
+              example:
+                totalCompanies: 42
+                pendingCommissionsAmount: 1250000
+                thisMonthRevenue: 3500000
+
+        '401':
+          description: Unauthorized - invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '403':
+          description: Forbidden - insufficient permissions (ADMIN role required)
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+components:
+  schemas:
+    # ==================== Commission Report Schemas ====================
+    CommissionReportResponse:
+      type: object
+      required:
+        - periodStart
+        - periodEnd
+        - records
+        - summary
+      properties:
+        companyId:
+          type: string
+          nullable: true
+          description: The company identifier (null when report covers all companies)
+          example: "tcrn:company:11111111-1111-1111-1111-111111111111"
+        companyName:
+          type: string
+          nullable: true
+          description: The company name
+          example: "Rent-A-Car Poland"
+        nip:
+          type: string
+          nullable: true
+          description: The company's NIP (tax identification number)
+          example: "1234567890"
+        periodStart:
+          type: string
+          format: date
+          description: Start date of the report period
+          example: "2024-01-01"
+        periodEnd:
+          type: string
+          format: date
+          description: End date of the report period
+          example: "2024-01-31"
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommissionRecordResponse'
+          description: List of commission records in the period
+        summary:
+          $ref: '#/components/schemas/CommissionSummaryResponse'
+
+    CommissionSummaryResponse:
+      type: object
+      required:
+        - reservationCount
+        - totalReservationRevenue
+        - totalCommission
+        - currency
+      properties:
+        reservationCount:
+          type: integer
+          format: int32
+          description: Total number of reservations in the period
+          minimum: 0
+          example: 15
+        totalReservationRevenue:
+          type: integer
+          format: int64
+          description: Total revenue from reservations in smallest currency unit (e.g., groszy for PLN)
+          minimum: 0
+          example: 5250000
+        totalCommission:
+          type: integer
+          format: int64
+          description: Total commission amount in smallest currency unit
+          minimum: 0
+          example: 525000
+        currency:
+          type: string
+          description: ISO 4217 currency code
+          pattern: '^[A-Z]{3}$'
+          example: "PLN"
+
+    CommissionRecordResponse:
+      type: object
+      required:
+        - id
+        - reservationId
+        - confirmationCode
+        - vehicleInfo
+        - pickupDate
+        - returnDate
+        - reservationTotalPrice
+        - commissionRatePercent
+        - commissionAmount
+        - currency
+        - status
+        - calculatedAt
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the commission record
+          example: "tcrn:commission:aabbccdd-1122-3344-5566-778899aabbcc"
+        reservationId:
+          type: string
+          description: Identifier of the associated reservation
+          example: "tcrn:reservation:aabbccdd-1122-3344-5566-778899aabbcc"
+        confirmationCode:
+          type: string
+          description: Reservation confirmation code
+          example: "ABC12345"
+        vehicleInfo:
+          type: string
+          description: Vehicle information (make, model, year)
+          example: "Toyota RAV4 2023"
+        pickupDate:
+          type: string
+          format: date-time
+          description: Reservation pickup date and time (ISO 8601)
+          example: "2024-01-10T10:00:00Z"
+        returnDate:
+          type: string
+          format: date-time
+          description: Reservation return date and time (ISO 8601)
+          example: "2024-01-17T10:00:00Z"
+        reservationTotalPrice:
+          type: integer
+          format: int64
+          description: Total price of the reservation in smallest currency unit
+          example: 350000
+        commissionRatePercent:
+          type: number
+          format: double
+          description: Commission rate applied as a percentage (e.g., 10.50 means 10.5%)
+          example: 10.00
+        commissionAmount:
+          type: integer
+          format: int64
+          description: Calculated commission amount in smallest currency unit
+          example: 35000
+        currency:
+          type: string
+          description: ISO 4217 currency code
+          pattern: '^[A-Z]{3}$'
+          example: "PLN"
+        status:
+          type: string
+          description: Commission status
+          enum:
+            - PENDING
+            - INVOICED
+            - PAID
+          example: "PENDING"
+        calculatedAt:
+          type: string
+          format: date-time
+          description: Date and time when the commission was calculated (ISO 8601)
+          example: "2024-01-17T12:00:00Z"
+
+    # ==================== Company Billing Schemas ====================
+    CompanyWithCommissionResponse:
+      type: object
+      required:
+        - id
+        - name
+        - commissionConfig
+        - currentMonthSummary
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the company
+          example: "tcrn:company:11111111-1111-1111-1111-111111111111"
+        name:
+          type: string
+          description: Company name
+          example: "Rent-A-Car Poland"
+        nip:
+          type: string
+          nullable: true
+          description: Company's NIP (tax identification number)
+          example: "1234567890"
+        commissionConfig:
+          $ref: '#/components/schemas/CommissionConfigResponse'
+        currentMonthSummary:
+          $ref: '#/components/schemas/CommissionSummaryResponse'
+
+    CommissionConfigResponse:
+      type: object
+      required:
+        - id
+        - commissionRatePercent
+        - minimumCommission
+        - effectiveFrom
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the commission configuration
+          example: "tcrn:commission-config:aabbccdd-1122-3344-5566-778899aabbcc"
+        companyId:
+          type: string
+          nullable: true
+          description: Company this configuration applies to (null for global default)
+          example: "tcrn:company:11111111-1111-1111-1111-111111111111"
+        commissionRatePercent:
+          type: number
+          format: double
+          description: Commission rate as a percentage (e.g., 10.50 means 10.5%)
+          example: 10.00
+        minimumCommission:
+          type: integer
+          format: int64
+          description: Minimum commission amount in smallest currency unit (e.g., groszy for PLN)
+          minimum: 0
+          example: 5000
+        effectiveFrom:
+          type: string
+          format: date-time
+          description: Date and time from which this configuration is effective (ISO 8601)
+          example: "2024-01-01T00:00:00Z"
+        effectiveTo:
+          type: string
+          format: date-time
+          nullable: true
+          description: Date and time until which this configuration is effective (null means currently active)
+          example: null
+
+    CommissionConfigRequest:
+      type: object
+      required:
+        - commissionRatePercent
+        - minimumCommission
+      properties:
+        commissionRatePercent:
+          type: number
+          format: double
+          description: Commission rate as a percentage (e.g., 10.50 means 10.5%). Must be positive.
+          minimum: 0
+          exclusiveMinimum: true
+          example: 12.50
+        minimumCommission:
+          type: integer
+          format: int64
+          description: Minimum commission amount in smallest currency unit. Must be zero or positive.
+          minimum: 0
+          example: 7500
+
+    # ==================== Dashboard Schemas ====================
+    DashboardOverviewResponse:
+      type: object
+      required:
+        - totalCompanies
+        - pendingCommissionsAmount
+        - thisMonthRevenue
+      properties:
+        totalCompanies:
+          type: integer
+          format: int32
+          description: Total number of companies on the platform
+          minimum: 0
+          example: 42
+        pendingCommissionsAmount:
+          type: integer
+          format: int64
+          description: Total amount of pending commissions in smallest currency unit (e.g., groszy for PLN)
+          minimum: 0
+          example: 1250000
+        thisMonthRevenue:
+          type: integer
+          format: int64
+          description: Total platform revenue for the current month in smallest currency unit
+          minimum: 0
+          example: 3500000
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Firebase JWT token with ADMIN role custom claim
+
+security:
+  - bearerAuth: []

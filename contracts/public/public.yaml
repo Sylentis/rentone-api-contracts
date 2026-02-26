@@ -1,0 +1,331 @@
+openapi: 3.0.3
+info:
+  title: RNT-ALPH Public API
+  description: |
+    Public API endpoints that do not require authentication.
+    Provides demo access requests, company lead submissions, and feature toggle state.
+  version: 1.0.0
+  contact:
+    name: RNT-ALPH Team
+
+servers:
+  - url: http://localhost:9847/api/v1/public
+    description: Local development server
+  - url: https://api.rnt-alph.com/v1/public
+    description: Production server
+
+tags:
+  - name: Demo Request
+    description: Demo access request for the corporate portal
+  - name: Company Lead
+    description: B2B company lead submissions
+  - name: Feature Toggles
+    description: Public feature toggle state
+
+paths:
+  # ==================== DEMO REQUEST ====================
+  /demo-request:
+    post:
+      tags:
+        - Demo Request
+      summary: Request demo access
+      description: |
+        Submit a request for demo access to the corporate portal.
+
+        **No authentication required**: This is a public endpoint.
+
+        **Rate limiting**: Requests are rate-limited per email domain to prevent abuse.
+        If rate limited, the response will return HTTP 429.
+
+        **Privacy consent**: The `privacyConsent` field must be `true` for the request to be processed.
+      operationId: requestDemoAccess
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DemoRequestDto'
+            example:
+              email: "jan.kowalski@rental-company.pl"
+              phoneNumber: "+48123456789"
+              marketingConsent: true
+              privacyConsent: true
+      responses:
+        '201':
+          description: Demo request created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemoRequestResponseDto'
+              example:
+                message: "Demo credentials will be sent to your email shortly"
+                requestId: "tcrn:demo-request:aabbccdd-1122-3344-5566-778899aabbcc"
+                success: true
+
+        '400':
+          description: Bad request - validation failed or request processing failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemoRequestResponseDto'
+              example:
+                message: "Privacy consent is required"
+                requestId: null
+                success: false
+
+        '429':
+          description: Too many requests - rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemoRequestResponseDto'
+              example:
+                message: "Too many demo requests from this email domain. Please try again later."
+                requestId: null
+                success: false
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  # ==================== COMPANY LEAD ====================
+  /company-lead:
+    post:
+      tags:
+        - Company Lead
+      summary: Submit a company lead
+      description: |
+        Submit a new company lead from a potential B2B customer interested in using the RentOne platform.
+
+        **No authentication required**: This is a public endpoint.
+
+        **Rate limiting**: Requests are rate-limited per email to prevent abuse.
+        If rate limited, the response will return HTTP 429.
+
+        **Privacy consent**: The `privacyConsent` field must be `true` for the submission to be processed.
+      operationId: submitCompanyLead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyLeadRequestDto'
+            example:
+              firstName: "Jan"
+              lastName: "Kowalski"
+              email: "jan.kowalski@rental-company.pl"
+              phoneNumber: "+48123456789"
+              companyName: "AutoRent Sp. z o.o."
+              privacyConsent: true
+              marketingConsent: false
+      responses:
+        '201':
+          description: Company lead created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyLeadResponseDto'
+              example:
+                success: true
+                message: "Thank you! Our team will contact you within 24 hours."
+                leadId: "tcrn:lead:aabbccdd-1122-3344-5566-778899aabbcc"
+
+        '400':
+          description: Bad request - validation failed or submission processing failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyLeadResponseDto'
+              example:
+                success: false
+                message: "Privacy consent is required"
+                leadId: null
+
+        '429':
+          description: Too many requests - rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyLeadResponseDto'
+              example:
+                success: false
+                message: "Too many submissions from this email. Please try again later."
+                leadId: null
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+  # ==================== FEATURE TOGGLES ====================
+  /features:
+    get:
+      tags:
+        - Feature Toggles
+      summary: Get feature toggle states
+      description: |
+        Returns the current enabled/disabled state of all named feature toggles.
+
+        **No authentication required**: This is a public endpoint.
+
+        The frontend uses this endpoint to conditionally render feature-gated UI sections.
+      operationId: getFeatureStates
+      responses:
+        '200':
+          description: Feature states retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeatureStateDto'
+              example:
+                features:
+                  blog: false
+                  analytics: true
+                  qualityControl: true
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '../shared/schemas/common.yaml#/ErrorResponse'
+
+components:
+  schemas:
+    # ==================== Demo Request Schemas ====================
+    DemoRequestDto:
+      type: object
+      required:
+        - email
+        - phoneNumber
+        - privacyConsent
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: The requester's email address
+          example: "jan.kowalski@rental-company.pl"
+        phoneNumber:
+          type: string
+          pattern: '^\+?[1-9]\d{7,14}$'
+          description: The requester's phone number in international format
+          example: "+48123456789"
+        marketingConsent:
+          type: boolean
+          description: Whether the user consents to marketing communications
+          default: false
+          example: true
+        privacyConsent:
+          type: boolean
+          description: Whether the user consents to the privacy policy (required to be true)
+          example: true
+
+    DemoRequestResponseDto:
+      type: object
+      required:
+        - message
+        - success
+      properties:
+        message:
+          type: string
+          description: Descriptive message about the result
+          example: "Demo credentials will be sent to your email shortly"
+        requestId:
+          type: string
+          nullable: true
+          description: The ID of the created demo request (null if failed)
+          example: "tcrn:demo-request:aabbccdd-1122-3344-5566-778899aabbcc"
+        success:
+          type: boolean
+          description: Whether the request was successful
+          example: true
+
+    # ==================== Company Lead Schemas ====================
+    CompanyLeadRequestDto:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+        - phoneNumber
+        - companyName
+        - privacyConsent
+      properties:
+        firstName:
+          type: string
+          maxLength: 100
+          description: The contact's first name
+          example: "Jan"
+        lastName:
+          type: string
+          maxLength: 100
+          description: The contact's last name
+          example: "Kowalski"
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: The contact's email address
+          example: "jan.kowalski@rental-company.pl"
+        phoneNumber:
+          type: string
+          pattern: '^\+?[1-9]\d{7,14}$'
+          description: The contact's phone number in international format
+          example: "+48123456789"
+        companyName:
+          type: string
+          minLength: 2
+          maxLength: 200
+          description: The company name
+          example: "AutoRent Sp. z o.o."
+        privacyConsent:
+          type: boolean
+          description: Whether the contact consents to the privacy policy (required to be true)
+          example: true
+        marketingConsent:
+          type: boolean
+          description: Whether the contact consents to marketing communications
+          default: false
+          example: false
+
+    CompanyLeadResponseDto:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          description: Whether the lead submission was successful
+          example: true
+        message:
+          type: string
+          description: User-friendly message about the submission result
+          example: "Thank you! Our team will contact you within 24 hours."
+        leadId:
+          type: string
+          nullable: true
+          description: The ID of the created lead (null if submission failed)
+          example: "tcrn:lead:aabbccdd-1122-3344-5566-778899aabbcc"
+
+    # ==================== Feature Toggle Schemas ====================
+    FeatureStateDto:
+      type: object
+      required:
+        - features
+      properties:
+        features:
+          type: object
+          additionalProperties:
+            type: boolean
+          description: Map of feature names to their enabled/disabled state
+          example:
+            blog: false
+            analytics: true
+            qualityControl: true
