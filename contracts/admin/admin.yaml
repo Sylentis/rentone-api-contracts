@@ -868,7 +868,7 @@ components:
           description: Commission status
           enum:
             - PENDING
-            - INVOICED
+            - WAIVED
             - PAID
           example: "PENDING"
         calculatedAt:
